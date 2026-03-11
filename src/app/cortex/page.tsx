@@ -60,12 +60,12 @@ function CortexColumn({
   archiving: string | null;
 }) {
   return (
-    <div className="flex flex-1 flex-col rounded-md border border-border-subtle bg-bg-base min-w-[280px]">
+    <div className="flex flex-1 flex-col rounded-none border-2 border-border-default bg-bg-base min-w-[280px]">
       {/* Column header */}
-      <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
+      <div className="flex items-center justify-between border-b-2 border-border-default px-3 py-2">
         <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-text-tertiary" />
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+          <Icon className="h-4 w-4 text-accent-500" />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-accent-500 font-mono">
             {title}
           </h3>
           <Badge>{count}</Badge>
@@ -75,7 +75,7 @@ function CortexColumn({
       {/* Items */}
       <div className="flex-1 space-y-2 overflow-y-auto p-2">
         {items.length === 0 && (
-          <p className="py-4 text-center text-xs text-text-tertiary">No items</p>
+          <p className="py-4 text-center text-xs text-text-tertiary font-mono">No items</p>
         )}
         {items.map((item) => {
           const SourceIcon = item.source_type
@@ -85,23 +85,23 @@ function CortexColumn({
           return (
             <div
               key={item.id}
-              className="rounded-md border border-border-subtle bg-bg-surface p-3 transition-colors hover:bg-bg-elevated cursor-pointer"
+              className="rounded-none border-2 border-border-default bg-bg-surface p-3 transition-colors hover:border-accent-500 cursor-pointer"
             >
               <div className="flex items-start gap-2">
                 <SourceIcon className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-text-primary leading-snug">
+                  <p className="text-sm font-medium text-text-primary leading-snug font-mono">
                     {item.title}
                   </p>
                   {item.description && (
-                    <p className="mt-1 text-xs text-text-tertiary line-clamp-2">
+                    <p className="mt-1 text-xs text-text-tertiary line-clamp-2 font-mono">
                       {item.description}
                     </p>
                   )}
                 </div>
               </div>
               <div className="mt-2 flex items-center justify-between">
-                <span className="text-[10px] text-text-tertiary">
+                <span className="text-[10px] text-text-tertiary font-mono">
                   {new Date(item.created_at).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
@@ -274,12 +274,12 @@ export default function CortexPage() {
   const allInbox = [...inboxItems, ...uncategorized];
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col font-mono">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border-subtle px-6 py-3">
+      <div className="flex items-center justify-between border-b-2 border-border-default px-6 py-3">
         <div className="flex items-center gap-2">
-          <Brain className="h-5 w-5 text-accent-500" />
-          <h1 className="text-lg font-semibold text-text-primary">Inner Cortex</h1>
+          <Brain className="h-5 w-5 text-terminal-400" />
+          <h1 className="text-lg font-semibold font-mono uppercase tracking-widest text-accent-500">Inner Cortex</h1>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm">
@@ -290,8 +290,8 @@ export default function CortexPage() {
       </div>
 
       {/* Quick capture bar */}
-      <div className="border-b border-border-subtle px-6 py-3">
-        <div className="flex items-center gap-2 rounded-md border border-border-default bg-bg-surface px-3 py-2 transition-colors focus-within:border-accent-500 focus-within:ring-1 focus-within:ring-accent-500/30">
+      <div className="border-b-2 border-border-default px-6 py-3">
+        <div className="flex items-center gap-2 rounded-none border-2 border-border-default bg-bg-base px-3 py-2 transition-colors focus-within:border-accent-500">
           {capturing ? (
             <Loader2 className="h-4 w-4 text-text-tertiary shrink-0 animate-spin" />
           ) : (
@@ -305,10 +305,10 @@ export default function CortexPage() {
               if (e.key === 'Enter') handleCapture();
             }}
             placeholder="Capture a thought, task, or idea... (Cmd+Shift+N)"
-            className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none"
+            className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none font-mono"
             disabled={capturing}
           />
-          <kbd className="rounded bg-bg-elevated px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary">
+          <kbd className="rounded-none border border-border-default bg-bg-elevated px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary font-mono">
             {'\u21E7\u2318N'}
           </kbd>
         </div>
@@ -320,16 +320,16 @@ export default function CortexPage() {
           {[1, 2, 3].map((i) => (
             <div
               key={i}
-              className="flex flex-1 flex-col rounded-md border border-border-subtle bg-bg-base min-w-[280px]"
+              className="flex flex-1 flex-col rounded-none border-2 border-border-default bg-bg-base min-w-[280px]"
             >
-              <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-2">
-                <div className="h-4 w-16 animate-pulse rounded bg-bg-elevated" />
+              <div className="flex items-center gap-2 border-b-2 border-border-default px-3 py-2">
+                <div className="h-4 w-16 animate-pulse rounded-none bg-bg-elevated" />
               </div>
               <div className="flex-1 space-y-2 p-2">
                 {[1, 2, 3].map((j) => (
                   <div
                     key={j}
-                    className="h-20 animate-pulse rounded-md bg-bg-elevated"
+                    className="h-20 animate-pulse rounded-none bg-bg-elevated"
                   />
                 ))}
               </div>

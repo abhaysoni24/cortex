@@ -1,57 +1,58 @@
 @import "tailwindcss";
 
-@theme {
-  /* Background layers — deep space with purple undertones */
-  --color-bg-base: #0B0B14;
-  --color-bg-surface: #12121E;
-  --color-bg-elevated: #1A1A2E;
-  --color-bg-overlay: #16213E;
-
-  /* Borders — subtle with option for glow */
-  --color-border-subtle: rgba(139, 92, 246, 0.15);
-  --color-border-default: rgba(139, 92, 246, 0.25);
-  --color-border-focus: #A855F7;
+@theme inline {
+  /* Background layers — pitch black brutalist */
+  --color-bg-base: #0A0A0A;
+  --color-bg-surface: #111111;
+  --color-bg-elevated: #1A1A1A;
+  --color-bg-overlay: #222222;
 
   /* Text */
-  --color-text-primary: #F0F0FF;
-  --color-text-secondary: #A5A5C0;
-  --color-text-tertiary: #6B6B8A;
-  --color-text-inverse: #0B0B14;
+  --color-text-primary: #E8E8E8;
+  --color-text-secondary: #999999;
+  --color-text-tertiary: #666666;
+  --color-text-inverse: #0A0A0A;
 
-  /* Primary accent — electric purple to magenta gradient feel */
-  --color-accent-50: #FAF5FF;
-  --color-accent-100: #F3E8FF;
-  --color-accent-200: #E9D5FF;
-  --color-accent-300: #D8B4FE;
-  --color-accent-400: #C084FC;
-  --color-accent-500: #A855F7;
-  --color-accent-600: #9333EA;
-  --color-accent-700: #7E22CE;
+  /* Borders — thick, solid */
+  --color-border-subtle: #333333;
+  --color-border-default: #555555;
+  --color-border-focus: #FFCC00;
 
-  /* Secondary accent — cyan */
-  --color-cyan-400: #22D3EE;
-  --color-cyan-500: #06B6D4;
+  /* Primary accent — industrial yellow */
+  --color-accent-50: #FFFDE6;
+  --color-accent-100: #FFF9B3;
+  --color-accent-200: #FFF380;
+  --color-accent-300: #FFED4D;
+  --color-accent-400: #FFE61A;
+  --color-accent-500: #FFCC00;
+  --color-accent-600: #D4A800;
+  --color-accent-700: #AA8700;
 
-  /* Tertiary accent — magenta/pink */
-  --color-pink-400: #F472B6;
-  --color-pink-500: #EC4899;
+  /* Terminal — CRT green */
+  --color-terminal-400: #39FF14;
+  --color-terminal-500: #2DD40E;
 
-  /* Status — vivid and bold */
-  --color-status-success: #34D399;
-  --color-status-warning: #FBBF24;
-  --color-status-danger: #F87171;
-  --color-status-info: #60A5FA;
-  --color-status-neutral: #8B8BA3;
+  /* Alert — red */
+  --color-alert-400: #FF3131;
+  --color-alert-500: #E62020;
 
-  /* Priority — neon vivid */
-  --color-priority-p0: #FF4757;
-  --color-priority-p1: #FFA502;
-  --color-priority-p2: #3742FA;
-  --color-priority-p3: #747D8C;
+  /* Status */
+  --color-status-success: #39FF14;
+  --color-status-warning: #FFCC00;
+  --color-status-danger: #FF3131;
+  --color-status-info: #00BFFF;
+  --color-status-neutral: #888888;
 
-  /* Font families */
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* Priority */
+  --color-priority-p0: #FF0000;
+  --color-priority-p1: #FF8C00;
+  --color-priority-p2: #FFCC00;
+  --color-priority-p3: #888888;
+
+  /* Font families — monospace default */
+  --font-sans: 'JetBrains Mono', ui-monospace, monospace;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Base styles */
@@ -59,21 +60,21 @@ html,
 body {
   background-color: var(--color-bg-base);
   color: var(--color-text-primary);
-  font-family: var(--font-sans);
+  font-family: var(--font-mono);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Selection — purple accent */
+/* Selection — yellow accent, black text */
 ::selection {
-  background-color: var(--color-accent-600);
-  color: #fff;
+  background-color: var(--color-accent-500);
+  color: #000;
 }
 
-/* Scrollbar — thin, purple tones */
+/* Scrollbar — brutal, no border-radius */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(139, 92, 246, 0.3) transparent;
+  scrollbar-color: #555 #111;
 }
 
 *::-webkit-scrollbar {
@@ -82,107 +83,49 @@ body {
 }
 
 *::-webkit-scrollbar-track {
-  background: transparent;
+  background: #111;
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: rgba(139, 92, 246, 0.3);
-  border-radius: 3px;
+  background-color: #555;
+  border-radius: 0;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(139, 92, 246, 0.5);
+  background-color: #777;
 }
 
-/* ===== GLOW UTILITIES ===== */
+/* ===== BRUTALIST UTILITIES ===== */
 
-.glow-purple {
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.3), 0 0 40px rgba(168, 85, 247, 0.1);
+.border-brutal {
+  border: 2px solid #555;
 }
 
-.glow-cyan {
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 0 40px rgba(6, 182, 212, 0.1);
+.border-brutal-accent {
+  border: 2px solid var(--color-accent-500);
 }
 
-.glow-pink {
-  box-shadow: 0 0 20px rgba(236, 72, 153, 0.3), 0 0 40px rgba(236, 72, 153, 0.1);
+.badge-loud {
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
 }
 
-/* ===== GRADIENT BORDER ===== */
-
-.gradient-border {
-  position: relative;
-  border: none !important;
+.terminal-green {
+  color: var(--color-terminal-400);
 }
 
-.gradient-border::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, #A855F7, #06B6D4, #EC4899);
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
+.shadow-brutal {
+  box-shadow: 3px 3px 0 #000;
 }
 
-/* ===== GLASS EFFECT ===== */
-
-.glass {
-  background: rgba(18, 18, 30, 0.8);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+.blink-cursor {
+  animation: blink 1s step-end infinite;
 }
 
-/* ===== GRADIENT TEXT ===== */
-
-.gradient-text {
-  background: linear-gradient(135deg, #A855F7, #06B6D4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ===== SHIMMER ANIMATION ===== */
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% center;
-  }
-  100% {
-    background-position: 200% center;
-  }
-}
-
-.shimmer {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(168, 85, 247, 0.15) 25%,
-    rgba(6, 182, 212, 0.15) 50%,
-    rgba(236, 72, 153, 0.15) 75%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 3s ease-in-out infinite;
-}
-
-/* ===== NEON PULSE ANIMATION ===== */
-
-@keyframes neon-pulse {
-  0%, 100% {
-    opacity: 0.6;
-  }
+@keyframes blink {
   50% {
-    opacity: 1;
+    opacity: 0;
   }
-}
-
-.neon-pulse {
-  animation: neon-pulse 2s ease-in-out infinite;
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { Sparkles, X, ArrowUp, Zap, AlertTriangle, Layers, ListChecks } from 'lucide-react';
+import { Brain, X, ArrowUp, Zap, AlertTriangle, Layers, ListChecks } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { useUIStore } from '@/stores/ui-store';
 
@@ -117,24 +117,24 @@ export function AssistantPanel() {
       <button
         onClick={() => setOpen(!open)}
         className={cn(
-          'fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-full',
-          'bg-gradient-to-br from-accent-500 to-pink-500 text-white shadow-lg',
-          'hover:shadow-[0_0_24px_rgba(168,85,247,0.5)] transition-all duration-200',
+          'fixed bottom-6 right-6 z-50 flex h-12 w-12 items-center justify-center rounded-none',
+          'bg-accent-500 text-black border-2 border-accent-600 shadow-[3px_3px_0_#000]',
+          'hover:bg-accent-400 transition-colors',
           'group',
           open && 'scale-0 opacity-0 pointer-events-none'
         )}
         title="Open Cortex Assistant (Cmd+J)"
       >
-        <Sparkles className="h-5 w-5 transition-transform group-hover:scale-110" />
-        <span className="absolute -top-8 right-0 hidden rounded bg-bg-elevated px-2 py-1 text-[10px] font-mono text-text-tertiary shadow group-hover:block whitespace-nowrap">
-          Cmd+J
+        <Brain className="h-5 w-5" />
+        <span className="absolute -top-8 right-0 hidden rounded-none border-2 border-border-default bg-bg-elevated px-2 py-1 text-[10px] font-mono text-accent-500 shadow-[2px_2px_0_#000] group-hover:block whitespace-nowrap">
+          CMD+J
         </span>
       </button>
 
       {/* Backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[2px] transition-opacity duration-200 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/40 transition-opacity duration-200 lg:hidden"
           onClick={() => setOpen(false)}
         />
       )}
@@ -143,23 +143,22 @@ export function AssistantPanel() {
       <div
         className={cn(
           'fixed top-0 right-0 z-50 flex h-screen w-[420px] flex-col',
-          'border-l border-accent-500/20 bg-bg-surface/95 backdrop-blur-xl',
-          'shadow-[-8px_0_32px_rgba(0,0,0,0.3),_-2px_0_8px_rgba(168,85,247,0.1)]',
+          'border-l-2 border-border-default bg-bg-surface',
           'transition-transform duration-300 ease-out',
           open ? 'translate-x-0' : 'translate-x-full'
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-accent-500/15 px-4 py-3">
+        <div className="flex items-center justify-between border-b-2 border-border-default px-4 py-3">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-accent-500/20 to-pink-500/20">
-              <Sparkles className="h-4 w-4 text-accent-400" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-none border-2 border-terminal-400 bg-bg-base">
+              <Brain className="h-4 w-4 text-terminal-400" />
             </div>
-            <h2 className="text-sm font-semibold text-text-primary">Cortex Assistant</h2>
+            <h2 className="text-sm font-bold font-mono uppercase tracking-wider text-accent-500">Cortex AI</h2>
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="flex h-7 w-7 items-center justify-center rounded-md text-text-tertiary hover:bg-bg-elevated hover:text-text-secondary transition-colors"
+            className="flex h-7 w-7 items-center justify-center rounded-none border-2 border-transparent text-text-tertiary hover:border-border-default hover:bg-bg-elevated hover:text-text-secondary transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -176,10 +175,10 @@ export function AssistantPanel() {
               ))}
               {isLoading && messages[messages.length - 1]?.content === '' && (
                 <div className="flex items-start gap-2">
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-accent-500/20 to-pink-500/20">
-                    <Sparkles className="h-3 w-3 text-accent-400" />
+                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-none border-2 border-terminal-400 bg-bg-base">
+                    <Brain className="h-3 w-3 text-terminal-400" />
                   </div>
-                  <div className="rounded-lg bg-bg-elevated/60 px-3 py-2">
+                  <div className="rounded-none border-2 border-border-default bg-bg-elevated px-3 py-2">
                     <TypingIndicator />
                   </div>
                 </div>
@@ -190,7 +189,7 @@ export function AssistantPanel() {
         </div>
 
         {/* Input area */}
-        <div className="border-t border-accent-500/15 px-4 py-3">
+        <div className="border-t-2 border-border-default px-4 py-3">
           <form onSubmit={handleSubmit} className="relative">
             <textarea
               ref={inputRef}
@@ -200,10 +199,10 @@ export function AssistantPanel() {
               placeholder="Ask Cortex anything..."
               rows={1}
               className={cn(
-                'w-full resize-none rounded-lg border border-border-subtle bg-bg-elevated/50 px-3 py-2.5 pr-10',
-                'text-sm text-text-primary placeholder:text-text-tertiary',
-                'outline-none transition-all duration-200',
-                'focus:border-accent-500/50 focus:shadow-[0_0_12px_rgba(168,85,247,0.15)]',
+                'w-full resize-none rounded-none border-2 border-border-default bg-bg-base px-3 py-2.5 pr-10',
+                'text-sm font-mono text-text-primary placeholder:text-text-tertiary',
+                'outline-none transition-colors',
+                'focus:border-accent-500',
                 'max-h-32'
               )}
               style={{ height: 'auto', minHeight: '40px' }}
@@ -217,16 +216,16 @@ export function AssistantPanel() {
               type="submit"
               disabled={!input.trim() || isLoading}
               className={cn(
-                'absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-md transition-all',
+                'absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-none transition-colors',
                 input.trim() && !isLoading
-                  ? 'bg-accent-500 text-white hover:bg-accent-600'
-                  : 'text-text-tertiary cursor-not-allowed'
+                  ? 'bg-accent-500 text-black border-2 border-accent-600 hover:bg-accent-400'
+                  : 'text-text-tertiary border-2 border-transparent cursor-not-allowed'
               )}
             >
               <ArrowUp className="h-4 w-4" />
             </button>
           </form>
-          <p className="mt-1.5 text-center text-[10px] text-text-tertiary">
+          <p className="mt-1.5 text-center text-[10px] font-mono text-text-tertiary uppercase tracking-wider">
             Shift+Enter for new line
           </p>
         </div>
@@ -238,26 +237,26 @@ export function AssistantPanel() {
 function WelcomeState({ onQuickAction }: { onQuickAction: (text: string) => void }) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-4">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent-500/20 to-pink-500/20 mb-4">
-        <Sparkles className="h-6 w-6 text-accent-400" />
+      <div className="flex h-12 w-12 items-center justify-center rounded-none border-2 border-terminal-400 bg-bg-base mb-4">
+        <Brain className="h-6 w-6 text-terminal-400" />
       </div>
-      <h3 className="text-base font-semibold text-text-primary mb-1">
-        Hey! I&apos;m your Cortex assistant.
+      <h3 className="text-base font-bold font-mono uppercase tracking-wider text-accent-500 mb-1">
+        Cortex AI
       </h3>
-      <p className="text-sm text-text-secondary mb-6">I can help you:</p>
+      <p className="text-sm font-mono text-text-secondary mb-6">I can help you:</p>
       <div className="flex flex-col gap-2 w-full max-w-xs">
         {QUICK_ACTIONS.map((action) => (
           <button
             key={action.label}
             onClick={() => onQuickAction(action.label)}
             className={cn(
-              'flex items-center gap-2.5 rounded-lg border border-border-subtle px-3 py-2.5',
-              'text-left text-sm text-text-secondary',
-              'hover:border-accent-500/30 hover:bg-accent-500/5 hover:text-text-primary',
-              'transition-all duration-150'
+              'flex items-center gap-2.5 rounded-none border-2 border-border-default px-3 py-2.5',
+              'text-left text-sm font-mono text-text-secondary',
+              'hover:border-accent-500 hover:text-accent-500',
+              'transition-colors'
             )}
           >
-            <action.icon className="h-4 w-4 shrink-0 text-accent-400" />
+            <action.icon className="h-4 w-4 shrink-0 text-terminal-400" />
             <span>{action.label}</span>
           </button>
         ))}
@@ -273,20 +272,20 @@ function MessageBubble({ message }: { message: Message }) {
   return (
     <div className={cn('flex gap-2', isUser ? 'justify-end' : 'justify-start')}>
       {!isUser && (
-        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-accent-500/20 to-pink-500/20 mt-0.5">
-          <Sparkles className="h-3 w-3 text-accent-400" />
+        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-none border-2 border-terminal-400 bg-bg-base mt-0.5">
+          <Brain className="h-3 w-3 text-terminal-400" />
         </div>
       )}
       <div
         className={cn(
-          'max-w-[85%] rounded-lg px-3 py-2 text-sm leading-relaxed',
+          'max-w-[85%] rounded-none px-3 py-2 text-sm font-mono leading-relaxed',
           isUser
-            ? 'bg-accent-600/80 text-white'
-            : 'bg-bg-elevated/60 text-text-primary border border-border-subtle/50'
+            ? 'bg-accent-500 text-black border-2 border-accent-600'
+            : 'bg-bg-elevated text-text-primary border-2 border-border-default'
         )}
       >
         <div className="whitespace-pre-wrap break-words">{message.content}</div>
-        <time className={cn('mt-1 block text-[10px]', isUser ? 'text-white/50' : 'text-text-tertiary')}>
+        <time className={cn('mt-1 block text-[10px]', isUser ? 'text-black/50' : 'text-text-tertiary')}>
           {formatTime(message.createdAt)}
         </time>
       </div>
@@ -297,9 +296,9 @@ function MessageBubble({ message }: { message: Message }) {
 function TypingIndicator() {
   return (
     <div className="flex items-center gap-1 px-1 py-0.5">
-      <span className="h-1.5 w-1.5 rounded-full bg-accent-400 animate-bounce [animation-delay:0ms]" />
-      <span className="h-1.5 w-1.5 rounded-full bg-accent-400 animate-bounce [animation-delay:150ms]" />
-      <span className="h-1.5 w-1.5 rounded-full bg-accent-400 animate-bounce [animation-delay:300ms]" />
+      <span className="h-1.5 w-1.5 rounded-none bg-terminal-400 animate-bounce [animation-delay:0ms]" />
+      <span className="h-1.5 w-1.5 rounded-none bg-terminal-400 animate-bounce [animation-delay:150ms]" />
+      <span className="h-1.5 w-1.5 rounded-none bg-terminal-400 animate-bounce [animation-delay:300ms]" />
     </div>
   );
 }

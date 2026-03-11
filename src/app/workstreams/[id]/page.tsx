@@ -115,12 +115,12 @@ function SortableTaskCard({ task }: { task: Task }) {
       {...attributes}
       {...listeners}
       onClick={() => useUIStore.getState().setActiveSlideOver(task.id)}
-      className="rounded-md border border-border-subtle bg-bg-surface p-3 transition-colors hover:bg-bg-elevated cursor-grab active:cursor-grabbing"
+      className="rounded-none border-2 border-border-default bg-bg-surface p-3 transition-colors hover:border-accent-500 cursor-grab active:cursor-grabbing"
     >
       <div className="flex items-start gap-2">
         <span
           className={cn(
-            'mt-1 h-2 w-2 shrink-0 rounded-full',
+            'mt-1 h-2 w-2 shrink-0 rounded-none',
             priorityDotColor[task.priority]
           )}
         />
@@ -132,7 +132,7 @@ function SortableTaskCard({ task }: { task: Task }) {
         {dueLabel && (
           <span
             className={cn(
-              'text-xs',
+              'text-xs font-mono',
               dueLabel === 'Overdue' ? 'text-status-danger' : 'text-text-tertiary'
             )}
           >
@@ -157,11 +157,11 @@ function TaskCardOverlay({ task }: { task: Task }) {
   const dueLabel = formatDueDate(task.due_date);
 
   return (
-    <div className="w-56 rounded-md border border-accent-500/50 bg-bg-surface p-3 shadow-lg ring-1 ring-accent-500/20">
+    <div className="w-56 rounded-none border-2 border-accent-500 bg-bg-surface p-3 shadow-[3px_3px_0_#000]">
       <div className="flex items-start gap-2">
         <span
           className={cn(
-            'mt-1 h-2 w-2 shrink-0 rounded-full',
+            'mt-1 h-2 w-2 shrink-0 rounded-none',
             priorityDotColor[task.priority]
           )}
         />
@@ -173,7 +173,7 @@ function TaskCardOverlay({ task }: { task: Task }) {
         {dueLabel && (
           <span
             className={cn(
-              'text-xs',
+              'text-xs font-mono',
               dueLabel === 'Overdue' ? 'text-status-danger' : 'text-text-tertiary'
             )}
           >
@@ -213,16 +213,16 @@ function KanbanColumn({
   return (
     <div
       className={cn(
-        'flex w-64 shrink-0 flex-col rounded-md border bg-bg-base transition-colors',
+        'flex w-64 shrink-0 flex-col rounded-none border-2 bg-bg-base transition-colors',
         isOver
-          ? 'border-accent-500/50 bg-accent-500/5'
-          : 'border-border-subtle'
+          ? 'border-accent-500 bg-accent-500/5'
+          : 'border-border-default'
       )}
     >
       {/* Column header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle">
+      <div className="flex items-center justify-between px-3 py-2 border-b-2 border-border-default">
         <div className="flex items-center gap-2">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-accent-500 font-mono">
             {label}
           </h3>
           <Badge>{tasks.length}</Badge>
@@ -248,7 +248,7 @@ function KanbanColumn({
       </div>
 
       {/* Add task button */}
-      <div className="border-t border-border-subtle p-2">
+      <div className="border-t-2 border-border-default p-2">
         <Button
           variant="ghost"
           size="sm"
@@ -273,16 +273,16 @@ function KanbanSkeleton() {
       {columns.map((col) => (
         <div
           key={col.status}
-          className="flex w-64 shrink-0 flex-col rounded-md border border-border-subtle bg-bg-base"
+          className="flex w-64 shrink-0 flex-col rounded-none border-2 border-border-default bg-bg-base"
         >
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle">
-            <div className="h-4 w-20 animate-pulse rounded bg-bg-elevated" />
+          <div className="flex items-center justify-between px-3 py-2 border-b-2 border-border-default">
+            <div className="h-4 w-20 animate-pulse rounded-none bg-bg-elevated" />
           </div>
           <div className="flex-1 space-y-2 p-2">
             {[1, 2, 3].map((i) => (
               <div
                 key={i}
-                className="h-16 animate-pulse rounded-md bg-bg-elevated"
+                className="h-16 animate-pulse rounded-none bg-bg-elevated"
               />
             ))}
           </div>
@@ -543,7 +543,7 @@ export default function WorkstreamPage({
         <div className="flex items-center gap-3">
           <span
             className={cn(
-              'h-3 w-3 rounded-full',
+              'h-3 w-3 rounded-none',
               !workstreamColor.startsWith('#') && workstreamColor
             )}
             style={
@@ -564,15 +564,15 @@ export default function WorkstreamPage({
         </div>
 
         {/* View switcher */}
-        <div className="flex items-center rounded-md border border-border-subtle bg-bg-surface">
+        <div className="flex items-center rounded-none border-2 border-border-default bg-bg-surface">
           {viewTabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                'px-3 py-1.5 text-xs font-medium transition-colors',
+                'px-3 py-1.5 text-xs font-medium transition-colors font-mono',
                 tab.key === activeTab
-                  ? 'bg-bg-elevated text-text-primary'
+                  ? 'bg-accent-500 text-black uppercase'
                   : 'text-text-tertiary hover:text-text-secondary'
               )}
             >

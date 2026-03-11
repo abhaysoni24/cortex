@@ -14,15 +14,15 @@ const Panel = React.forwardRef<HTMLDivElement, PanelProps>(
       <div
         ref={ref}
         className={cn(
-          'flex h-full flex-col rounded-md border border-border-subtle bg-bg-surface',
+          'flex h-full flex-col rounded-none border-2 border-border-default bg-bg-surface',
           className
         )}
         {...props}
       >
         {(title || actions) && (
-          <div className="flex shrink-0 items-center justify-between border-b border-border-subtle px-3 py-2">
+          <div className="flex shrink-0 items-center justify-between border-b-2 border-border-default px-3 py-2">
             {title && (
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-accent-500">
                 {title}
               </h3>
             )}

@@ -25,14 +25,14 @@ export function SlideOver({
       <Dialog.Portal>
         <Dialog.Overlay
           className={cn(
-            'fixed inset-0 z-50 bg-black/40',
+            'fixed inset-0 z-50 bg-black/60',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0'
           )}
         />
         <Dialog.Content
           className={cn(
-            'fixed right-0 top-0 z-50 flex h-screen flex-col border-l border-border-subtle bg-bg-surface shadow-xl',
+            'fixed right-0 top-0 z-50 flex h-screen flex-col border-l-2 border-border-default bg-bg-surface',
             'data-[state=open]:animate-in data-[state=open]:slide-in-from-right',
             'data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right',
             'duration-200'
@@ -40,13 +40,13 @@ export function SlideOver({
           style={{ width }}
         >
           {/* Header */}
-          <div className="flex h-12 shrink-0 items-center justify-between border-b border-border-subtle px-4">
-            <Dialog.Title className="text-sm font-medium text-text-primary">
+          <div className="flex h-12 shrink-0 items-center justify-between border-b-2 border-border-default px-4">
+            <Dialog.Title className="text-sm font-bold font-mono uppercase tracking-wider text-accent-500">
               {title}
             </Dialog.Title>
             <Dialog.Close asChild>
               <button
-                className="rounded-md p-1.5 text-text-tertiary transition-colors hover:bg-bg-elevated hover:text-text-secondary"
+                className="rounded-none border-2 border-transparent p-1.5 text-text-tertiary transition-colors hover:border-border-default hover:bg-bg-elevated hover:text-text-secondary"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" />

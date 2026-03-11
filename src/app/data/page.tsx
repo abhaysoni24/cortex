@@ -11,8 +11,6 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 
 // ---------------------------------------------------------------------------
 // Placeholder data
@@ -72,6 +70,9 @@ const trendColors = {
   flat: 'text-text-tertiary',
 };
 
+// Columns that contain numeric-like values (for right-alignment)
+const numericColumns = new Set(['active_users', 'total_revenue', 'avg_session_sec']);
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -82,23 +83,25 @@ export default function DataTerminalPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border-subtle px-6 py-3">
+      <div className="flex items-center justify-between border-b-2 border-border-default px-6 py-3">
         <div className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-accent-500" />
-          <h1 className="text-lg font-semibold text-text-primary">Data Terminal</h1>
+          <Database className="h-5 w-5 text-terminal-400" />
+          <h1 className="font-mono text-lg font-bold uppercase tracking-widest text-accent-500">
+            Data Terminal
+          </h1>
         </div>
 
         {/* Tab bar */}
-        <div className="flex items-center rounded-md border border-border-subtle bg-bg-surface">
+        <div className="flex items-center border-2 border-border-default bg-bg-base">
           {dataTabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={cn(
-                'px-3 py-1.5 text-xs font-medium transition-colors',
+                'px-3 py-1.5 font-mono text-xs uppercase transition-colors',
                 activeTab === tab.key
-                  ? 'bg-bg-elevated text-text-primary'
-                  : 'text-text-tertiary hover:text-text-secondary'
+                  ? 'bg-accent-500 font-bold text-black'
+                  : 'text-text-tertiary hover:text-text-primary'
               )}
             >
               {tab.label}
@@ -115,11 +118,15 @@ export default function DataTerminalPage() {
             return (
               <div
                 key={metric.name}
-                className="rounded-md border border-border-subtle bg-bg-surface p-3"
+                className="border-2 border-border-default rounded-none bg-bg-surface p-3"
               >
-                <p className="text-xs text-text-tertiary">{metric.name}</p>
-                <p className="mt-1 text-xl font-mono text-accent-500">{metric.value}</p>
-                <div className={cn('mt-1 flex items-center gap-1 text-xs', trendColors[metric.trend])}>
+                <p className="font-mono text-[10px] uppercase tracking-widest text-accent-500">
+                  {metric.name}
+                </p>
+                <p className="mt-1 font-mono text-2xl font-bold text-terminal-400">
+                  {metric.value}
+                </p>
+                <div className={cn('mt-1 flex items-center gap-1 font-mono text-xs', trendColors[metric.trend])}>
                   <TrendIcon className="h-3 w-3" />
                   <span>{metric.delta}</span>
                 </div>
@@ -133,39 +140,45 @@ export default function DataTerminalPage() {
           {/* Editor + results (2 cols) */}
           <div className="col-span-2 space-y-3">
             {/* Query editor */}
-            <div className="rounded-md border border-border-subtle bg-bg-surface">
-              <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+            <div className="border-2 border-border-default rounded-none bg-bg-surface">
+              <div className="flex items-center justify-between border-b-2 border-border-default px-3 py-2">
+                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent-500">
                   Query Editor
                 </h3>
-                <Button size="sm">
+                <button className="inline-flex items-center gap-2 rounded-none border-2 border-terminal-400 bg-transparent px-3 py-1.5 font-mono text-xs font-bold uppercase text-terminal-400 transition-colors hover:bg-terminal-400/10">
                   <Play className="h-3 w-3" />
                   Run
-                </Button>
+                </button>
               </div>
               <textarea
                 defaultValue={placeholderQuery}
-                className="h-44 w-full resize-none bg-bg-elevated p-4 font-mono text-sm text-text-primary outline-none"
+                placeholder="-- ENTER SQL QUERY..."
+                className="h-44 w-full resize-none rounded-none border-0 bg-bg-base p-4 font-mono text-sm text-terminal-400 outline-none placeholder:text-terminal-400/40"
                 spellCheck={false}
               />
             </div>
 
             {/* Results table */}
-            <div className="rounded-md border border-border-subtle bg-bg-surface">
-              <div className="flex items-center justify-between border-b border-border-subtle px-3 py-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+            <div className="border-2 border-border-default rounded-none">
+              <div className="flex items-center justify-between border-b-2 border-border-default px-3 py-2">
+                <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent-500">
                   Results
                 </h3>
-                <Badge>{queryResults.length} rows</Badge>
+                <span className="rounded-none border-2 border-border-default bg-bg-elevated px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-secondary">
+                  {queryResults.length} rows
+                </span>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border-subtle">
+                    <tr className="border-b-2 border-border-default bg-bg-elevated">
                       {Object.keys(queryResults[0]).map((col) => (
                         <th
                           key={col}
-                          className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wider text-text-tertiary"
+                          className={cn(
+                            'px-3 py-2 font-mono text-[10px] font-bold uppercase tracking-widest text-accent-500',
+                            numericColumns.has(col) ? 'text-right' : 'text-left'
+                          )}
                         >
                           {col}
                         </th>
@@ -176,12 +189,15 @@ export default function DataTerminalPage() {
                     {queryResults.map((row, i) => (
                       <tr
                         key={i}
-                        className="border-b border-border-subtle last:border-0 hover:bg-bg-elevated transition-colors"
+                        className="border-b border-border-subtle last:border-0 transition-colors hover:bg-bg-elevated"
                       >
-                        {Object.values(row).map((val, j) => (
+                        {Object.entries(row).map(([key, val], j) => (
                           <td
                             key={j}
-                            className="px-3 py-2 font-mono text-xs text-text-primary"
+                            className={cn(
+                              'px-3 py-2 font-mono text-sm text-text-primary',
+                              numericColumns.has(key) ? 'text-right' : 'text-left'
+                            )}
                           >
                             {val}
                           </td>
@@ -195,17 +211,17 @@ export default function DataTerminalPage() {
           </div>
 
           {/* Saved queries sidebar */}
-          <div className="rounded-md border border-border-subtle bg-bg-surface">
-            <div className="border-b border-border-subtle px-3 py-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+          <div className="border-2 border-border-default rounded-none bg-bg-surface">
+            <div className="border-b-2 border-border-default px-3 py-2">
+              <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-accent-500">
                 Saved Queries
               </h3>
             </div>
-            <div className="space-y-0.5 p-2">
+            <div className="space-y-0 p-2">
               {savedQueries.map((query) => (
                 <div
                   key={query.name}
-                  className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary cursor-pointer"
+                  className="flex items-center gap-2 border-b border-border-subtle px-2 py-1.5 font-mono text-sm text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary cursor-pointer last:border-0"
                 >
                   <Star
                     className={cn(
@@ -222,6 +238,13 @@ export default function DataTerminalPage() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Terminal status bar */}
+      <div className="border-t-2 border-border-default bg-bg-base px-4 py-1.5">
+        <p className="font-mono text-[10px] uppercase tracking-wider text-terminal-400">
+          [SOURCE: BIGQUERY] | [STATUS: STUB] | [ROWS: 5] | [EXEC: 0.42s] | [LAST REFRESH: NEVER]
+        </p>
       </div>
     </div>
   );

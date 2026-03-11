@@ -66,19 +66,19 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-border-subtle bg-bg-base/80 backdrop-blur-xl transition-all duration-200',
+        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r-2 border-border-default bg-bg-base transition-all duration-200',
         collapsed ? 'w-14' : 'w-60'
       )}
     >
       {/* Logo */}
-      <div className="flex h-12 items-center px-4">
+      <div className="flex h-12 items-center border-b-2 border-border-default px-4">
         <span
           className={cn(
-            'font-bold tracking-wider gradient-text',
+            'font-bold font-mono tracking-widest text-accent-500',
             collapsed ? 'text-sm' : 'text-lg'
           )}
         >
-          {collapsed ? 'C' : 'CORTEX'}
+          {collapsed ? '[C]' : '[CORTEX]'}
         </span>
       </div>
 
@@ -94,13 +94,13 @@ export function Sidebar() {
         {/* Workstreams section */}
         {!collapsed && (
           <div className="mb-1 mt-4 px-3">
-            <span className="text-xs font-medium uppercase tracking-wider text-text-tertiary">
+            <span className="text-[10px] font-bold font-mono uppercase tracking-widest text-accent-500">
               Workstreams
             </span>
           </div>
         )}
 
-        {collapsed && <div className="my-2 border-t border-border-subtle" />}
+        {collapsed && <div className="my-2 border-t-2 border-border-default" />}
 
         <div className="space-y-0.5">
           {placeholderWorkstreams.map((ws) => (
@@ -108,14 +108,14 @@ export function Sidebar() {
               key={ws.id}
               href={`/workstreams/${ws.id}`}
               className={cn(
-                'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-text-secondary transition-all duration-200 hover:bg-accent-500/5 hover:text-text-primary',
+                'flex items-center gap-2.5 rounded-none px-3 py-2 text-sm font-mono text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary',
                 pathname === `/workstreams/${ws.id}` &&
-                  'border-l-2 border-accent-500 bg-accent-500/10 text-accent-400 shadow-[0_0_12px_rgba(168,85,247,0.15)]',
+                  'border-l-2 border-accent-500 bg-accent-500/10 text-accent-500',
                 collapsed && 'justify-center px-0'
               )}
             >
               <span
-                className={cn('h-2 w-2 shrink-0 rounded-full shadow-[0_0_6px_currentColor]', ws.color)}
+                className={cn('h-2 w-2 shrink-0 rounded-none', ws.color)}
               />
               {!collapsed && <span className="truncate">{ws.name}</span>}
             </Link>
@@ -124,15 +124,15 @@ export function Sidebar() {
 
         {!collapsed && (
           <button
-            className="mt-1 flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-xs text-text-tertiary transition-colors hover:bg-bg-elevated hover:text-text-secondary"
+            className="mt-1 flex w-full items-center gap-2 rounded-none px-3 py-1.5 text-xs font-mono text-text-tertiary transition-colors hover:bg-bg-elevated hover:text-text-secondary"
           >
             <Plus className="h-3.5 w-3.5" />
-            New Workstream
+            NEW WORKSTREAM
           </button>
         )}
 
-        {!collapsed && <div className="my-2 border-t border-border-subtle" />}
-        {collapsed && <div className="my-2 border-t border-border-subtle" />}
+        {!collapsed && <div className="my-2 border-t-2 border-border-default" />}
+        {collapsed && <div className="my-2 border-t-2 border-border-default" />}
 
         {/* Remaining nav items */}
         <div className="space-y-0.5">
@@ -148,11 +148,11 @@ export function Sidebar() {
       </nav>
 
       {/* Collapse toggle */}
-      <div className="border-t border-border-subtle p-2">
+      <div className="border-t-2 border-border-default p-2">
         <button
           onClick={toggleSidebar}
           className={cn(
-            'flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-text-tertiary transition-colors hover:bg-bg-elevated hover:text-text-secondary',
+            'flex w-full items-center gap-2 rounded-none px-3 py-2 text-sm font-mono text-text-tertiary transition-colors hover:bg-bg-elevated hover:text-text-secondary',
             collapsed && 'justify-center px-0'
           )}
           title={collapsed ? 'Expand sidebar (Cmd+\\)' : 'Collapse sidebar (Cmd+\\)'}
@@ -162,8 +162,8 @@ export function Sidebar() {
           ) : (
             <>
               <ChevronLeft className="h-4 w-4" />
-              <span className="flex-1 text-left text-xs">Collapse</span>
-              <kbd className="rounded bg-bg-elevated px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary">
+              <span className="flex-1 text-left text-xs uppercase tracking-wider">Collapse</span>
+              <kbd className="rounded-none border-2 border-border-default bg-bg-base px-1.5 py-0.5 font-mono text-[10px] text-accent-500">
                 {'\u2318\\'}
               </kbd>
             </>
@@ -188,16 +188,16 @@ function NavLink({
     <Link
       href={item.href}
       className={cn(
-        'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-all duration-200',
+        'flex items-center gap-2.5 rounded-none px-3 py-2 text-sm font-mono transition-colors',
         active
-          ? 'border-l-2 border-accent-500 bg-accent-500/10 text-accent-400 shadow-[0_0_12px_rgba(168,85,247,0.15)]'
-          : 'text-text-secondary hover:bg-accent-500/5 hover:text-text-primary',
+          ? 'border-l-2 border-accent-500 bg-accent-500/10 text-accent-500'
+          : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary',
         collapsed && 'justify-center px-0'
       )}
       title={collapsed ? item.label : undefined}
     >
       <Icon className="h-4 w-4 shrink-0" />
-      {!collapsed && <span className="truncate">{item.label}</span>}
+      {!collapsed && <span className="truncate uppercase tracking-wider text-xs">{item.label}</span>}
     </Link>
   );
 }

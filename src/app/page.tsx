@@ -194,23 +194,23 @@ export default function CommandCenterPage() {
   if (loading) {
     return (
       <div className="space-y-4 p-6">
-        <div className="h-6 w-40 animate-pulse rounded bg-bg-elevated" />
-        <div className="h-16 animate-pulse rounded-md bg-bg-elevated" />
+        <div className="h-6 w-40 animate-pulse rounded-none bg-bg-elevated" />
+        <div className="h-16 animate-pulse rounded-none bg-bg-elevated" />
         <div className="grid grid-cols-2 gap-4">
-          <div className="h-48 animate-pulse rounded-md bg-bg-elevated" />
-          <div className="h-48 animate-pulse rounded-md bg-bg-elevated" />
+          <div className="h-48 animate-pulse rounded-none bg-bg-elevated" />
+          <div className="h-48 animate-pulse rounded-none bg-bg-elevated" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4 p-6">
+    <div className="space-y-4 p-6 font-mono">
       {/* Page header */}
-      <h1 className="text-lg font-semibold text-text-primary">Command Center</h1>
+      <h1 className="text-lg font-semibold font-mono uppercase tracking-widest text-accent-500">Command Center</h1>
 
       {/* Daily Briefing */}
-      <div className="rounded-md border border-border-subtle border-l-2 border-l-accent-500 bg-bg-surface p-4">
+      <div className="rounded-none border-2 border-accent-500 border-l-4 border-l-accent-500 bg-bg-surface p-4">
         <p className="text-sm text-text-secondary">
           Good morning.{' '}
           <span className="text-text-primary font-medium">
@@ -243,8 +243,8 @@ export default function CommandCenterPage() {
       {/* Middle row: Priority Stack + Calendar Strip */}
       <div className="grid grid-cols-2 gap-4">
         {/* Priority Stack */}
-        <div className="rounded-md border border-border-subtle bg-bg-surface p-4">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+        <div className="rounded-none border-2 border-border-default bg-bg-surface p-4">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-accent-500 font-mono">
             Priority Stack
           </h2>
           <div className="space-y-2">
@@ -256,11 +256,11 @@ export default function CommandCenterPage() {
             {priorityTasks.map((task) => (
               <div
                 key={task.id}
-                className="flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-bg-elevated cursor-pointer"
+                className="flex items-center gap-3 rounded-none px-2 py-1.5 transition-colors hover:bg-bg-elevated cursor-pointer"
               >
                 <span
                   className={cn(
-                    'h-2 w-2 shrink-0 rounded-full',
+                    'h-2 w-2 shrink-0 rounded-none',
                     priorityDotColor[task.priority]
                   )}
                 />
@@ -276,8 +276,8 @@ export default function CommandCenterPage() {
         </div>
 
         {/* Calendar Strip */}
-        <div className="rounded-md border border-border-subtle bg-bg-surface p-4">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+        <div className="rounded-none border-2 border-border-default bg-bg-surface p-4">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-accent-500 font-mono">
             Today&apos;s Schedule
           </h2>
           <div className="space-y-2">
@@ -285,9 +285,9 @@ export default function CommandCenterPage() {
               <div
                 key={i}
                 className={cn(
-                  'flex items-start gap-3 rounded-md px-2 py-1.5 transition-colors',
+                  'flex items-start gap-3 rounded-none px-2 py-1.5 transition-colors',
                   slot.isBlock
-                    ? 'border border-dashed border-border-default bg-bg-elevated/50'
+                    ? 'border-2 border-dashed border-border-default bg-bg-elevated/50'
                     : 'hover:bg-bg-elevated'
                 )}
               >
@@ -307,9 +307,9 @@ export default function CommandCenterPage() {
       {/* Bottom row: Incoming Signals + Workstream Health */}
       <div className="grid grid-cols-2 gap-4">
         {/* Incoming Signals */}
-        <div className="rounded-md border border-border-subtle bg-bg-surface p-4">
+        <div className="rounded-none border-2 border-border-default bg-bg-surface p-4">
           <div className="mb-3 flex items-center gap-2">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-accent-500 font-mono">
               Incoming Signals
             </h2>
             {signals.length > 0 && (
@@ -327,7 +327,7 @@ export default function CommandCenterPage() {
               return (
                 <div
                   key={signal.id}
-                  className="flex items-start gap-3 rounded-md px-2 py-2 transition-colors hover:bg-bg-elevated"
+                  className="flex items-start gap-3 rounded-none px-2 py-2 transition-colors hover:bg-bg-elevated"
                 >
                   <SourceIcon className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" />
                   <div className="flex-1 min-w-0">
@@ -370,8 +370,8 @@ export default function CommandCenterPage() {
         </div>
 
         {/* Workstream Health */}
-        <div className="rounded-md border border-border-subtle bg-bg-surface p-4">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+        <div className="rounded-none border-2 border-border-default bg-bg-surface p-4">
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-accent-500 font-mono">
             Workstreams
           </h2>
           <div className="space-y-3">
@@ -391,7 +391,7 @@ export default function CommandCenterPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span
-                        className={cn('h-2 w-2 rounded-full', colorStyle ? '' : colorClass)}
+                        className={cn('h-2 w-2 rounded-none', colorStyle ? '' : colorClass)}
                         style={colorStyle}
                       />
                       <span className="text-sm text-text-primary">{ws.name}</span>
@@ -400,9 +400,9 @@ export default function CommandCenterPage() {
                       {ws.progress}%
                     </span>
                   </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-elevated">
+                  <div className="h-1.5 w-full overflow-hidden rounded-none bg-bg-elevated">
                     <div
-                      className={cn('h-full rounded-full', colorStyle ? '' : colorClass)}
+                      className={cn('h-full rounded-none', colorStyle ? '' : colorClass)}
                       style={{
                         width: `${ws.progress}%`,
                         ...(colorStyle ?? {}),
@@ -419,10 +419,10 @@ export default function CommandCenterPage() {
       {/* Extra row: Overdue + Blocked */}
       <div className="grid grid-cols-2 gap-4">
         {/* Overdue */}
-        <div className="rounded-md border border-border-subtle border-l-2 border-l-status-danger bg-bg-surface p-4">
+        <div className="rounded-none border-2 border-border-default border-l-4 border-l-status-danger bg-bg-surface p-4">
           <div className="mb-3 flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-status-danger" />
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-status-danger">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-status-danger font-mono">
               Overdue
             </h2>
           </div>
@@ -433,11 +433,11 @@ export default function CommandCenterPage() {
             {overdueItems.map((item) => (
               <div
                 key={item.id}
-                className="flex items-center gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-bg-elevated cursor-pointer"
+                className="flex items-center gap-3 rounded-none px-2 py-1.5 transition-colors hover:bg-bg-elevated cursor-pointer"
               >
                 <span
                   className={cn(
-                    'h-2 w-2 shrink-0 rounded-full',
+                    'h-2 w-2 shrink-0 rounded-none',
                     priorityDotColor[item.priority]
                   )}
                 />
@@ -453,10 +453,10 @@ export default function CommandCenterPage() {
         </div>
 
         {/* Blocked */}
-        <div className="rounded-md border border-border-subtle border-l-2 border-l-status-danger bg-bg-surface p-4">
+        <div className="rounded-none border-2 border-border-default border-l-4 border-l-status-danger bg-bg-surface p-4">
           <div className="mb-3 flex items-center gap-2">
             <Ban className="h-4 w-4 text-status-danger" />
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-status-danger">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-status-danger font-mono">
               Blocked
             </h2>
           </div>
@@ -467,7 +467,7 @@ export default function CommandCenterPage() {
             {blockedItems.map((item) => (
               <div
                 key={item.id}
-                className="flex items-start gap-3 rounded-md px-2 py-1.5 transition-colors hover:bg-bg-elevated cursor-pointer"
+                className="flex items-start gap-3 rounded-none px-2 py-1.5 transition-colors hover:bg-bg-elevated cursor-pointer"
               >
                 <Ban className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-danger" />
                 <div className="flex-1 min-w-0">

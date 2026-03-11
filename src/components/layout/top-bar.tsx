@@ -36,9 +36,9 @@ export function TopBar() {
   const { segments } = getBreadcrumb(pathname);
 
   return (
-    <header className="flex h-12 shrink-0 items-center border-b border-border-subtle bg-bg-base/80 backdrop-blur-xl px-4">
+    <header className="flex h-12 shrink-0 items-center border-b-2 border-border-default bg-bg-base px-4">
       {/* Breadcrumb */}
-      <div className="flex items-center gap-1.5 text-sm">
+      <div className="flex items-center gap-1.5 text-sm font-mono uppercase tracking-wider">
         {segments.map((segment, i) => (
           <React.Fragment key={i}>
             {i > 0 && (
@@ -47,7 +47,7 @@ export function TopBar() {
             <span
               className={cn(
                 i === segments.length - 1
-                  ? 'text-text-primary'
+                  ? 'text-accent-500 font-bold'
                   : 'text-text-tertiary'
               )}
             >
@@ -63,18 +63,18 @@ export function TopBar() {
       {/* Command palette trigger */}
       <button
         onClick={() => setCommandPaletteOpen(true)}
-        className="mx-4 flex max-w-[400px] flex-1 cursor-pointer items-center gap-2 rounded-md border border-border-subtle bg-bg-surface/80 backdrop-blur-sm px-3 py-1.5 text-sm text-text-tertiary transition-all duration-200 hover:border-accent-500/40 hover:text-text-secondary hover:shadow-[0_0_15px_rgba(168,85,247,0.15)] focus:border-accent-500/60 focus:shadow-[0_0_20px_rgba(168,85,247,0.25)]"
+        className="mx-4 flex max-w-[400px] flex-1 cursor-pointer items-center gap-2 rounded-none border-2 border-border-default bg-bg-base px-3 py-1.5 text-sm font-mono text-text-tertiary transition-colors hover:border-accent-500 hover:text-text-secondary"
       >
         <Search className="h-3.5 w-3.5 shrink-0" />
         <span className="flex-1 text-left">Search or type a command...</span>
-        <kbd className="rounded bg-bg-elevated px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary">
+        <kbd className="rounded-none border-2 border-border-default bg-bg-elevated px-1.5 py-0.5 font-mono text-[10px] text-accent-500">
           {'\u2318K'}
         </kbd>
       </button>
 
       {/* Settings */}
       <button
-        className="rounded-md p-2 text-text-tertiary transition-colors hover:bg-bg-elevated hover:text-text-secondary"
+        className="rounded-none border-2 border-transparent p-2 text-text-tertiary transition-colors hover:border-border-default hover:bg-bg-elevated hover:text-text-secondary"
         aria-label="Settings"
       >
         <Settings className="h-4 w-4" />

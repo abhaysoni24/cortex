@@ -92,7 +92,7 @@ const timelineEvents: TimelineEvent[] = [
     time: '3:30 PM',
     endTime: '4:30 PM',
     title: 'Product review',
-    color: 'border-l-purple-500',
+    color: 'border-l-accent-500',
     attendees: 8,
   },
   {
@@ -119,14 +119,14 @@ const priorityDotColor: Record<string, string> = {
 
 export default function CalendarPage() {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col font-mono">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-border-subtle px-6 py-3">
+      <div className="flex items-center justify-between border-b-2 border-border-default px-6 py-3">
         <div className="flex items-center gap-2">
           <Calendar className="h-5 w-5 text-accent-500" />
-          <h1 className="text-lg font-semibold text-text-primary">Today&apos;s Agenda</h1>
+          <h1 className="text-lg font-semibold font-mono uppercase tracking-widest text-accent-500">Today&apos;s Agenda</h1>
         </div>
-        <p className="text-sm text-text-secondary">Wednesday, March 11, 2026</p>
+        <p className="text-sm text-text-secondary font-mono">Wednesday, March 11, 2026</p>
       </div>
 
       {/* Timeline */}
@@ -136,19 +136,19 @@ export default function CalendarPage() {
             <div key={event.id} className="flex gap-4">
               {/* Time column */}
               <div className="w-20 shrink-0 pt-3 text-right">
-                <span className="font-mono text-xs text-text-tertiary">{event.time}</span>
+                <span className="font-mono text-xs text-accent-500">{event.time}</span>
               </div>
 
               {/* Connector dot */}
               <div className="relative flex flex-col items-center">
-                <div className="mt-4 h-2 w-2 rounded-full bg-border-default" />
-                <div className="flex-1 w-px bg-border-subtle" />
+                <div className="mt-4 h-2 w-2 rounded-none bg-border-default" />
+                <div className="flex-1 w-px bg-border-default" />
               </div>
 
               {/* Event card */}
               <div
                 className={cn(
-                  'mb-2 flex-1 rounded-md border border-border-subtle border-l-2 bg-bg-surface p-3 transition-colors hover:bg-bg-elevated cursor-pointer',
+                  'mb-2 flex-1 rounded-none border-2 border-border-default border-l-4 bg-bg-surface p-3 transition-colors hover:bg-bg-elevated cursor-pointer',
                   event.color
                 )}
               >
@@ -157,7 +157,7 @@ export default function CalendarPage() {
                     {event.type === 'task' && event.priority && (
                       <span
                         className={cn(
-                          'mt-1 h-2 w-2 shrink-0 rounded-full',
+                          'mt-1 h-2 w-2 shrink-0 rounded-none',
                           priorityDotColor[event.priority]
                         )}
                       />
@@ -173,7 +173,7 @@ export default function CalendarPage() {
                     <div>
                       <p
                         className={cn(
-                          'text-sm font-medium',
+                          'text-sm font-medium font-mono',
                           event.done
                             ? 'text-text-tertiary line-through'
                             : 'text-text-primary'
@@ -182,7 +182,7 @@ export default function CalendarPage() {
                         {event.title}
                       </p>
                       {event.endTime && (
-                        <p className="mt-0.5 text-xs text-text-tertiary">
+                        <p className="mt-0.5 text-xs text-text-tertiary font-mono">
                           {event.time} - {event.endTime}
                         </p>
                       )}
@@ -217,13 +217,13 @@ export default function CalendarPage() {
           {/* End of day marker */}
           <div className="flex gap-4">
             <div className="w-20 shrink-0 pt-3 text-right">
-              <span className="font-mono text-xs text-text-tertiary">6:00 PM</span>
+              <span className="font-mono text-xs text-accent-500">6:00 PM</span>
             </div>
             <div className="relative flex flex-col items-center">
-              <div className="mt-4 h-2 w-2 rounded-full bg-text-tertiary" />
+              <div className="mt-4 h-2 w-2 rounded-none bg-text-tertiary" />
             </div>
             <div className="mb-2 flex-1 pt-3">
-              <p className="text-xs text-text-tertiary">End of day</p>
+              <p className="text-xs text-text-tertiary font-mono">End of day</p>
             </div>
           </div>
         </div>

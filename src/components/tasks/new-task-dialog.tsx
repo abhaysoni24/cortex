@@ -130,18 +130,18 @@ export function NewTaskDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-border-subtle bg-bg-surface shadow-2xl focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
+          className="fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-none border-2 border-border-default bg-bg-surface shadow-[3px_3px_0_#000] focus:outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95"
           onKeyDown={handleKeyDown}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border-subtle px-5 py-3">
-            <Dialog.Title className="text-sm font-semibold text-text-primary">
+          <div className="flex items-center justify-between border-b-2 border-border-default px-5 py-3">
+            <Dialog.Title className="text-sm font-bold font-mono uppercase tracking-wider text-accent-500">
               New Task
             </Dialog.Title>
             <Dialog.Close asChild>
-              <button className="rounded p-1 text-text-tertiary hover:bg-bg-elevated hover:text-text-secondary">
+              <button className="rounded-none border-2 border-transparent p-1 text-text-tertiary hover:border-border-default hover:bg-bg-elevated hover:text-text-secondary">
                 <X className="h-4 w-4" />
               </button>
             </Dialog.Close>
@@ -151,7 +151,7 @@ export function NewTaskDialog({
           <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4">
             {/* Title */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-secondary">
+              <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-accent-500">
                 Title <span className="text-status-danger">*</span>
               </label>
               <input
@@ -160,13 +160,13 @@ export function NewTaskDialog({
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="What needs to be done?"
                 autoFocus
-                className="w-full rounded-md border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary outline-none transition-colors focus:border-accent-500 focus:ring-1 focus:ring-accent-500/30"
+                className="w-full rounded-none border-2 border-border-default bg-bg-base px-3 py-2 text-sm font-mono text-text-primary placeholder:text-text-tertiary outline-none transition-colors focus:border-accent-500"
               />
             </div>
 
             {/* Description */}
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-text-secondary">
+              <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-accent-500">
                 Description
               </label>
               <textarea
@@ -174,7 +174,7 @@ export function NewTaskDialog({
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Add details, context, or links..."
                 rows={3}
-                className="w-full rounded-md border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary outline-none transition-colors focus:border-accent-500 focus:ring-1 focus:ring-accent-500/30 resize-none"
+                className="w-full rounded-none border-2 border-border-default bg-bg-base px-3 py-2 text-sm font-mono text-text-primary placeholder:text-text-tertiary outline-none transition-colors focus:border-accent-500 resize-none"
               />
             </div>
 
@@ -182,13 +182,13 @@ export function NewTaskDialog({
             <div className="grid grid-cols-2 gap-3">
               {/* Priority */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-secondary">
+                <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-accent-500">
                   Priority
                 </label>
                 <select
                   value={priority}
                   onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                  className="w-full rounded-md border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-accent-500 focus:ring-1 focus:ring-accent-500/30 appearance-none cursor-pointer"
+                  className="w-full rounded-none border-2 border-border-default bg-bg-base px-3 py-2 text-sm font-mono text-text-primary outline-none transition-colors focus:border-accent-500 appearance-none cursor-pointer"
                 >
                   {priorityOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -200,13 +200,13 @@ export function NewTaskDialog({
 
               {/* Status */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-secondary">
+                <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-accent-500">
                   Status
                 </label>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                  className="w-full rounded-md border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-accent-500 focus:ring-1 focus:ring-accent-500/30 appearance-none cursor-pointer"
+                  className="w-full rounded-none border-2 border-border-default bg-bg-base px-3 py-2 text-sm font-mono text-text-primary outline-none transition-colors focus:border-accent-500 appearance-none cursor-pointer"
                 >
                   {statusOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>
@@ -221,20 +221,20 @@ export function NewTaskDialog({
             <div className="grid grid-cols-2 gap-3">
               {/* Due Date */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-secondary">
+                <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-accent-500">
                   Due Date
                 </label>
                 <input
                   type="date"
                   value={dueDate}
                   onChange={(e) => setDueDate(e.target.value)}
-                  className="w-full rounded-md border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-accent-500 focus:ring-1 focus:ring-accent-500/30"
+                  className="w-full rounded-none border-2 border-border-default bg-bg-base px-3 py-2 text-sm font-mono text-text-primary outline-none transition-colors focus:border-accent-500"
                 />
               </div>
 
               {/* Workstream */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-text-secondary">
+                <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-accent-500">
                   Workstream
                 </label>
                 <select
@@ -242,7 +242,7 @@ export function NewTaskDialog({
                   onChange={(e) =>
                     setWorkstreamId(e.target.value || null)
                   }
-                  className="w-full rounded-md border border-border-default bg-bg-base px-3 py-2 text-sm text-text-primary outline-none transition-colors focus:border-accent-500 focus:ring-1 focus:ring-accent-500/30 appearance-none cursor-pointer"
+                  className="w-full rounded-none border-2 border-border-default bg-bg-base px-3 py-2 text-sm font-mono text-text-primary outline-none transition-colors focus:border-accent-500 appearance-none cursor-pointer"
                 >
                   <option value="">Inner Cortex</option>
                   {workstreams.map((ws) => (
@@ -255,8 +255,8 @@ export function NewTaskDialog({
             </div>
 
             {/* Actions */}
-            <div className="flex items-center justify-between border-t border-border-subtle pt-4">
-              <span className="text-[10px] text-text-tertiary">
+            <div className="flex items-center justify-between border-t-2 border-border-default pt-4">
+              <span className="text-[10px] font-mono text-text-tertiary uppercase tracking-wider">
                 {'\u2318'}+Enter to submit
               </span>
               <div className="flex gap-2">
