@@ -66,7 +66,7 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-border-subtle bg-bg-base transition-all duration-200',
+        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-border-subtle bg-bg-base/80 backdrop-blur-xl transition-all duration-200',
         collapsed ? 'w-14' : 'w-60'
       )}
     >
@@ -74,7 +74,7 @@ export function Sidebar() {
       <div className="flex h-12 items-center px-4">
         <span
           className={cn(
-            'font-bold tracking-wider text-accent-500',
+            'font-bold tracking-wider gradient-text',
             collapsed ? 'text-sm' : 'text-lg'
           )}
         >
@@ -108,14 +108,14 @@ export function Sidebar() {
               key={ws.id}
               href={`/workstreams/${ws.id}`}
               className={cn(
-                'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-bg-elevated hover:text-text-primary',
+                'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm text-text-secondary transition-all duration-200 hover:bg-accent-500/5 hover:text-text-primary',
                 pathname === `/workstreams/${ws.id}` &&
-                  'border-l-2 border-accent-500 bg-bg-elevated text-accent-500',
+                  'border-l-2 border-accent-500 bg-accent-500/10 text-accent-400 shadow-[0_0_12px_rgba(168,85,247,0.15)]',
                 collapsed && 'justify-center px-0'
               )}
             >
               <span
-                className={cn('h-2 w-2 shrink-0 rounded-full', ws.color)}
+                className={cn('h-2 w-2 shrink-0 rounded-full shadow-[0_0_6px_currentColor]', ws.color)}
               />
               {!collapsed && <span className="truncate">{ws.name}</span>}
             </Link>
@@ -188,10 +188,10 @@ function NavLink({
     <Link
       href={item.href}
       className={cn(
-        'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+        'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-all duration-200',
         active
-          ? 'border-l-2 border-accent-500 bg-bg-elevated text-accent-500'
-          : 'text-text-secondary hover:bg-bg-elevated hover:text-text-primary',
+          ? 'border-l-2 border-accent-500 bg-accent-500/10 text-accent-400 shadow-[0_0_12px_rgba(168,85,247,0.15)]'
+          : 'text-text-secondary hover:bg-accent-500/5 hover:text-text-primary',
         collapsed && 'justify-center px-0'
       )}
       title={collapsed ? item.label : undefined}

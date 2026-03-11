@@ -1,25 +1,35 @@
 'use client';
 
-import { use } from 'react';
+import { use, useCallback, useEffect, useState } from 'react';
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDroppable,
+  type DragStartEvent,
+  type DragEndEvent,
+  type DragOverEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable';
 import { Plus } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { useUIStore } from '@/stores/ui-store';
+import { NewTaskDialog } from '@/components/tasks/new-task-dialog';
+import type { Task, TaskStatus } from '@/stores/task-store';
 
 // ---------------------------------------------------------------------------
-// Types & placeholder data
+// Constants
 // ---------------------------------------------------------------------------
-
-type TaskStatus = 'inbox' | 'planned' | 'in_progress' | 'waiting' | 'blocked' | 'done';
-
-interface KanbanTask {
-  id: string;
-  title: string;
-  priority: 'p0' | 'p1' | 'p2' | 'p3';
-  due?: string;
-  subtasksDone?: number;
-  subtasksTotal?: number;
-}
 
 const columns: { status: TaskStatus; label: string }[] = [
   { status: 'inbox', label: 'Inbox' },
@@ -29,40 +39,6 @@ const columns: { status: TaskStatus; label: string }[] = [
   { status: 'blocked', label: 'Blocked' },
   { status: 'done', label: 'Done' },
 ];
-
-const kanbanData: Record<TaskStatus, KanbanTask[]> = {
-  inbox: [
-    { id: 't1', title: 'Investigate conversion drop on /pricing', priority: 'p1', due: 'Mar 14' },
-    { id: 't2', title: 'Add UTM tracking to newsletter', priority: 'p2' },
-    { id: 't3', title: 'Review competitor landing pages', priority: 'p3', due: 'Mar 16' },
-  ],
-  planned: [
-    { id: 't4', title: 'Build A/B test for hero CTA', priority: 'p0', due: 'Mar 12', subtasksDone: 1, subtasksTotal: 4 },
-    { id: 't5', title: 'Set up BigQuery funnel views', priority: 'p1', due: 'Mar 13' },
-    { id: 't6', title: 'Draft email drip sequence', priority: 'p2', due: 'Mar 15', subtasksDone: 0, subtasksTotal: 3 },
-  ],
-  in_progress: [
-    { id: 't7', title: 'Ship onboarding flow v2', priority: 'p0', due: 'Today', subtasksDone: 2, subtasksTotal: 4 },
-    { id: 't8', title: 'Implement GA4 event schema', priority: 'p1', due: 'Mar 12' },
-    { id: 't9', title: 'Update pricing page copy', priority: 'p1', due: 'Today' },
-    { id: 't10', title: 'Design referral flow mockups', priority: 'p2', due: 'Mar 14', subtasksDone: 3, subtasksTotal: 5 },
-  ],
-  waiting: [
-    { id: 't11', title: 'Legal review for email campaigns', priority: 'p1', due: 'Mar 13' },
-    { id: 't12', title: 'Design approval for landing page', priority: 'p2', due: 'Mar 14' },
-    { id: 't13', title: 'API key from analytics vendor', priority: 'p3' },
-  ],
-  blocked: [
-    { id: 't14', title: 'Deploy tracking pixel fix', priority: 'p0', due: 'Overdue' },
-    { id: 't15', title: 'Migrate BigQuery dataset', priority: 'p1', due: 'Mar 15' },
-    { id: 't16', title: 'SSO integration testing', priority: 'p2' },
-  ],
-  done: [
-    { id: 't17', title: 'Launch newsletter signup widget', priority: 'p1' },
-    { id: 't18', title: 'Set up Slack webhook alerts', priority: 'p2' },
-    { id: 't19', title: 'Configure GA4 data stream', priority: 'p2' },
-  ],
-};
 
 const priorityDotColor: Record<string, string> = {
   p0: 'bg-priority-p0',
@@ -79,8 +55,245 @@ const viewTabs: { key: ViewTab; label: string }[] = [
   { key: 'data', label: 'Data' },
 ];
 
+interface Workstream {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+  icon: string | null;
+}
+
 // ---------------------------------------------------------------------------
-// Component
+// Format date helper
+// ---------------------------------------------------------------------------
+
+function formatDueDate(dateStr: string | null): string | null {
+  if (!dateStr) return null;
+  const date = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const due = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (diffDays < 0) return 'Overdue';
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Tomorrow';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ---------------------------------------------------------------------------
+// Sortable Task Card
+// ---------------------------------------------------------------------------
+
+function SortableTaskCard({ task }: { task: Task }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: task.id,
+    data: { type: 'task', task },
+  });
+
+  const style = {
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  const dueLabel = formatDueDate(task.due_date);
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      onClick={() => useUIStore.getState().setActiveSlideOver(task.id)}
+      className="rounded-md border border-border-subtle bg-bg-surface p-3 transition-colors hover:bg-bg-elevated cursor-grab active:cursor-grabbing"
+    >
+      <div className="flex items-start gap-2">
+        <span
+          className={cn(
+            'mt-1 h-2 w-2 shrink-0 rounded-full',
+            priorityDotColor[task.priority]
+          )}
+        />
+        <p className="text-sm font-medium text-text-primary leading-snug">
+          {task.title}
+        </p>
+      </div>
+      <div className="mt-2 flex items-center gap-3">
+        {dueLabel && (
+          <span
+            className={cn(
+              'text-xs',
+              dueLabel === 'Overdue' ? 'text-status-danger' : 'text-text-tertiary'
+            )}
+          >
+            {dueLabel}
+          </span>
+        )}
+        {(task.subtask_count ?? 0) > 0 && (
+          <span className="text-xs text-text-tertiary">
+            {task.subtasks_done ?? 0}/{task.subtask_count}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Static Task Card (for DragOverlay)
+// ---------------------------------------------------------------------------
+
+function TaskCardOverlay({ task }: { task: Task }) {
+  const dueLabel = formatDueDate(task.due_date);
+
+  return (
+    <div className="w-56 rounded-md border border-accent-500/50 bg-bg-surface p-3 shadow-lg ring-1 ring-accent-500/20">
+      <div className="flex items-start gap-2">
+        <span
+          className={cn(
+            'mt-1 h-2 w-2 shrink-0 rounded-full',
+            priorityDotColor[task.priority]
+          )}
+        />
+        <p className="text-sm font-medium text-text-primary leading-snug">
+          {task.title}
+        </p>
+      </div>
+      <div className="mt-2 flex items-center gap-3">
+        {dueLabel && (
+          <span
+            className={cn(
+              'text-xs',
+              dueLabel === 'Overdue' ? 'text-status-danger' : 'text-text-tertiary'
+            )}
+          >
+            {dueLabel}
+          </span>
+        )}
+        {(task.subtask_count ?? 0) > 0 && (
+          <span className="text-xs text-text-tertiary">
+            {task.subtasks_done ?? 0}/{task.subtask_count}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Droppable Column
+// ---------------------------------------------------------------------------
+
+function KanbanColumn({
+  status,
+  label,
+  tasks,
+  onAddTask,
+}: {
+  status: TaskStatus;
+  label: string;
+  tasks: Task[];
+  onAddTask: () => void;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `column-${status}`,
+    data: { type: 'column', status },
+  });
+
+  return (
+    <div
+      className={cn(
+        'flex w-64 shrink-0 flex-col rounded-md border bg-bg-base transition-colors',
+        isOver
+          ? 'border-accent-500/50 bg-accent-500/5'
+          : 'border-border-subtle'
+      )}
+    >
+      {/* Column header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle">
+        <div className="flex items-center gap-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+            {label}
+          </h3>
+          <Badge>{tasks.length}</Badge>
+        </div>
+      </div>
+
+      {/* Task list */}
+      <div ref={setNodeRef} className="flex-1 space-y-2 overflow-y-auto p-2 min-h-[60px]">
+        <SortableContext
+          items={tasks.map((t) => t.id)}
+          strategy={verticalListSortingStrategy}
+          id={status}
+        >
+          {tasks.length === 0 && (
+            <p className="py-4 text-center text-xs text-text-tertiary">
+              No tasks
+            </p>
+          )}
+          {tasks.map((task) => (
+            <SortableTaskCard key={task.id} task={task} />
+          ))}
+        </SortableContext>
+      </div>
+
+      {/* Add task button */}
+      <div className="border-t border-border-subtle p-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start text-text-tertiary"
+          onClick={onAddTask}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add Task
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Loading skeleton
+// ---------------------------------------------------------------------------
+
+function KanbanSkeleton() {
+  return (
+    <div className="flex flex-1 gap-3 overflow-x-auto p-4">
+      {columns.map((col) => (
+        <div
+          key={col.status}
+          className="flex w-64 shrink-0 flex-col rounded-md border border-border-subtle bg-bg-base"
+        >
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle">
+            <div className="h-4 w-20 animate-pulse rounded bg-bg-elevated" />
+          </div>
+          <div className="flex-1 space-y-2 p-2">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-16 animate-pulse rounded-md bg-bg-elevated"
+              />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page Component
 // ---------------------------------------------------------------------------
 
 export default function WorkstreamPage({
@@ -90,16 +303,264 @@ export default function WorkstreamPage({
 }) {
   const { id } = use(params);
 
-  // Derive a display name from the id
-  const displayName = id.charAt(0).toUpperCase() + id.slice(1);
+  // State
+  const [tasksByColumn, setTasksByColumn] = useState<Record<TaskStatus, Task[]>>({
+    inbox: [],
+    planned: [],
+    in_progress: [],
+    waiting: [],
+    blocked: [],
+    done: [],
+  });
+  const [loading, setLoading] = useState(true);
+  const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const [activeTab, setActiveTab] = useState<ViewTab>('kanban');
+  const [workstream, setWorkstream] = useState<Workstream | null>(null);
+  const [allWorkstreams, setAllWorkstreams] = useState<Workstream[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogDefaultStatus, setDialogDefaultStatus] = useState<TaskStatus>('planned');
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
+    })
+  );
+
+  // -------------------------------------------------------------------------
+  // Fetch workstream info
+  // -------------------------------------------------------------------------
+
+  useEffect(() => {
+    async function fetchWorkstreams() {
+      try {
+        const res = await fetch('/api/workstreams');
+        if (!res.ok) return;
+        const data: Workstream[] = await res.json();
+        setAllWorkstreams(data);
+        // Find the workstream matching the slug or ID
+        const ws = data.find((w) => w.slug === id || w.id === id);
+        if (ws) setWorkstream(ws);
+      } catch (err) {
+        console.error('Failed to fetch workstreams:', err);
+      }
+    }
+    fetchWorkstreams();
+  }, [id]);
+
+  // -------------------------------------------------------------------------
+  // Fetch tasks
+  // -------------------------------------------------------------------------
+
+  const fetchTasks = useCallback(async () => {
+    try {
+      // If we have a workstream ID, use it. Otherwise try the slug as ID.
+      const wsId = workstream?.id ?? id;
+      const res = await fetch(`/api/tasks?workstream_id=${wsId}`);
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data: Task[] = await res.json();
+
+      const grouped: Record<TaskStatus, Task[]> = {
+        inbox: [],
+        planned: [],
+        in_progress: [],
+        waiting: [],
+        blocked: [],
+        done: [],
+      };
+
+      for (const task of data) {
+        const col = grouped[task.status];
+        if (col) col.push(task);
+      }
+
+      setTasksByColumn(grouped);
+    } catch (err) {
+      console.error('Failed to fetch tasks:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [workstream?.id, id]);
+
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
+
+  // -------------------------------------------------------------------------
+  // DnD handlers
+  // -------------------------------------------------------------------------
+
+  const findTaskColumn = (taskId: string): TaskStatus | null => {
+    for (const [status, tasks] of Object.entries(tasksByColumn)) {
+      if (tasks.some((t) => t.id === taskId)) return status as TaskStatus;
+    }
+    return null;
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const sourceColumn = findTaskColumn(active.id as string);
+    if (sourceColumn) {
+      const task = tasksByColumn[sourceColumn].find((t) => t.id === active.id);
+      if (task) setActiveTask(task);
+    }
+  };
+
+  const handleDragOver = (event: DragOverEvent) => {
+    const { active, over } = event;
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const activeColumn = findTaskColumn(activeId);
+    if (!activeColumn) return;
+
+    // Determine target column: either directly over a column, or over a task in another column
+    let overColumn: TaskStatus | null = null;
+    if (overId.startsWith('column-')) {
+      overColumn = overId.replace('column-', '') as TaskStatus;
+    } else {
+      overColumn = findTaskColumn(overId);
+    }
+
+    if (!overColumn || activeColumn === overColumn) return;
+
+    // Move the task optimistically between columns during drag
+    setTasksByColumn((prev) => {
+      const activeItems = [...prev[activeColumn]];
+      const overItems = [...prev[overColumn!]];
+      const taskIndex = activeItems.findIndex((t) => t.id === activeId);
+      if (taskIndex === -1) return prev;
+
+      const [movedTask] = activeItems.splice(taskIndex, 1);
+      const updatedTask = { ...movedTask, status: overColumn! };
+
+      // Find insertion index
+      const overTaskIndex = overItems.findIndex((t) => t.id === overId);
+      if (overTaskIndex >= 0) {
+        overItems.splice(overTaskIndex, 0, updatedTask);
+      } else {
+        overItems.push(updatedTask);
+      }
+
+      return {
+        ...prev,
+        [activeColumn]: activeItems,
+        [overColumn!]: overItems,
+      };
+    });
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveTask(null);
+
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    const currentColumn = findTaskColumn(activeId);
+    if (!currentColumn) return;
+
+    // Handle reordering within same column
+    const overColumn = overId.startsWith('column-')
+      ? (overId.replace('column-', '') as TaskStatus)
+      : findTaskColumn(overId);
+
+    if (!overColumn) return;
+
+    if (currentColumn === overColumn && !overId.startsWith('column-')) {
+      const items = tasksByColumn[currentColumn];
+      const oldIndex = items.findIndex((t) => t.id === activeId);
+      const newIndex = items.findIndex((t) => t.id === overId);
+      if (oldIndex !== newIndex) {
+        setTasksByColumn((prev) => ({
+          ...prev,
+          [currentColumn]: arrayMove(prev[currentColumn], oldIndex, newIndex),
+        }));
+      }
+    }
+
+    // Find the task to get its original status
+    const task = tasksByColumn[currentColumn].find((t) => t.id === activeId);
+    const originalStatus = active.data.current?.task?.status as TaskStatus | undefined;
+
+    // If status actually changed, patch the API
+    if (originalStatus && originalStatus !== currentColumn) {
+      try {
+        const res = await fetch(`/api/tasks/${activeId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: currentColumn }),
+        });
+        if (!res.ok) {
+          // Revert on error
+          console.error('Failed to update task status, reverting');
+          fetchTasks();
+        }
+      } catch (err) {
+        console.error('Failed to update task status:', err);
+        fetchTasks();
+      }
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveTask(null);
+    fetchTasks(); // Revert to server state
+  };
+
+  // -------------------------------------------------------------------------
+  // Dialog handlers
+  // -------------------------------------------------------------------------
+
+  const openAddTaskDialog = (status: TaskStatus = 'planned') => {
+    setDialogDefaultStatus(status);
+    setDialogOpen(true);
+  };
+
+  const handleTaskCreated = () => {
+    fetchTasks(); // Refresh from server
+  };
+
+  // -------------------------------------------------------------------------
+  // Derive display name
+  // -------------------------------------------------------------------------
+
+  const displayName = workstream?.name ?? id.charAt(0).toUpperCase() + id.slice(1);
+  const workstreamColor = workstream?.color ?? 'bg-status-success';
+
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
 
   return (
     <div className="flex h-full flex-col">
       {/* Top bar */}
       <div className="flex items-center justify-between border-b border-border-subtle px-6 py-3">
         <div className="flex items-center gap-3">
-          <span className="h-3 w-3 rounded-full bg-status-success" />
+          <span
+            className={cn(
+              'h-3 w-3 rounded-full',
+              !workstreamColor.startsWith('#') && workstreamColor
+            )}
+            style={
+              workstreamColor.startsWith('#')
+                ? { backgroundColor: workstreamColor }
+                : undefined
+            }
+          />
           <h1 className="text-lg font-semibold text-text-primary">{displayName}</h1>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => openAddTaskDialog('planned')}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add Task
+          </Button>
         </div>
 
         {/* View switcher */}
@@ -107,9 +568,10 @@ export default function WorkstreamPage({
           {viewTabs.map((tab) => (
             <button
               key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
               className={cn(
                 'px-3 py-1.5 text-xs font-medium transition-colors',
-                tab.key === 'kanban'
+                tab.key === activeTab
                   ? 'bg-bg-elevated text-text-primary'
                   : 'text-text-tertiary hover:text-text-secondary'
               )}
@@ -120,78 +582,52 @@ export default function WorkstreamPage({
         </div>
       </div>
 
-      {/* Kanban board */}
-      <div className="flex flex-1 gap-3 overflow-x-auto p-4">
-        {columns.map((col) => {
-          const tasks = kanbanData[col.status];
-          return (
-            <div
-              key={col.status}
-              className="flex w-64 shrink-0 flex-col rounded-md border border-border-subtle bg-bg-base"
-            >
-              {/* Column header */}
-              <div className="flex items-center justify-between px-3 py-2 border-b border-border-subtle">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                    {col.label}
-                  </h3>
-                  <Badge>{tasks.length}</Badge>
-                </div>
-              </div>
+      {/* Content */}
+      {loading ? (
+        <KanbanSkeleton />
+      ) : activeTab === 'kanban' ? (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <div className="flex flex-1 gap-3 overflow-x-auto p-4">
+            {columns.map((col) => (
+              <KanbanColumn
+                key={col.status}
+                status={col.status}
+                label={col.label}
+                tasks={tasksByColumn[col.status]}
+                onAddTask={() => openAddTaskDialog(col.status)}
+              />
+            ))}
+          </div>
 
-              {/* Task list */}
-              <div className="flex-1 space-y-2 overflow-y-auto p-2">
-                {tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    onClick={() => console.log('open task detail', task.id)}
-                    className="rounded-md border border-border-subtle bg-bg-surface p-3 transition-colors hover:bg-bg-elevated cursor-pointer"
-                  >
-                    <div className="flex items-start gap-2">
-                      <span
-                        className={cn(
-                          'mt-1 h-2 w-2 shrink-0 rounded-full',
-                          priorityDotColor[task.priority]
-                        )}
-                      />
-                      <p className="text-sm font-medium text-text-primary leading-snug">
-                        {task.title}
-                      </p>
-                    </div>
-                    <div className="mt-2 flex items-center gap-3">
-                      {task.due && (
-                        <span
-                          className={cn(
-                            'text-xs',
-                            task.due === 'Overdue'
-                              ? 'text-status-danger'
-                              : 'text-text-tertiary'
-                          )}
-                        >
-                          {task.due}
-                        </span>
-                      )}
-                      {task.subtasksTotal != null && (
-                        <span className="text-xs text-text-tertiary">
-                          {task.subtasksDone}/{task.subtasksTotal}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+          <DragOverlay>
+            {activeTask ? <TaskCardOverlay task={activeTask} /> : null}
+          </DragOverlay>
+        </DndContext>
+      ) : (
+        <div className="flex flex-1 items-center justify-center">
+          <p className="text-sm text-text-tertiary">
+            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} view coming
+            soon
+          </p>
+        </div>
+      )}
 
-              {/* Add task button */}
-              <div className="border-t border-border-subtle p-2">
-                <Button variant="ghost" size="sm" className="w-full justify-start text-text-tertiary">
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Task
-                </Button>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* New Task Dialog */}
+      <NewTaskDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onCreated={handleTaskCreated}
+        defaultStatus={dialogDefaultStatus}
+        defaultWorkstreamId={workstream?.id ?? null}
+        workstreams={allWorkstreams}
+      />
     </div>
   );
 }

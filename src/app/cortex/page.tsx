@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useEffect, useState } from 'react';
 import {
   Brain,
   MessageSquare,
@@ -11,104 +12,24 @@ import {
   Plus,
   Inbox,
   Filter,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { NewTaskDialog } from '@/components/tasks/new-task-dialog';
+import type { Task, CortexCategory } from '@/stores/task-store';
 
 // ---------------------------------------------------------------------------
-// Placeholder data
+// Types & helpers
 // ---------------------------------------------------------------------------
 
-interface CortexItem {
+interface Workstream {
   id: string;
-  title: string;
-  preview: string;
-  source?: 'slack' | 'gmail' | 'calendar' | 'manual';
-  time: string;
+  name: string;
+  slug: string;
+  color: string | null;
 }
-
-const inboxItems: CortexItem[] = [
-  {
-    id: 'c1',
-    title: 'Slack: Alex in #growth',
-    preview: 'Can we move the A/B test launch to Thursday? The creative assets are delayed.',
-    source: 'slack',
-    time: '12m ago',
-  },
-  {
-    id: 'c2',
-    title: 'Gmail: Q1 Investor Letter',
-    preview: 'Draft review needed for the quarterly investor update before Friday.',
-    source: 'gmail',
-    time: '34m ago',
-  },
-  {
-    id: 'c3',
-    title: 'Calendar: Board meeting moved',
-    preview: 'Board meeting rescheduled to Friday 3 PM. Deck needs updating.',
-    source: 'calendar',
-    time: '1h ago',
-  },
-  {
-    id: 'c4',
-    title: 'Slack: Deploy pipeline failing',
-    preview: 'Staging deploy is broken — CI/CD timeout on integration tests.',
-    source: 'slack',
-    time: '2h ago',
-  },
-];
-
-const triageItems: CortexItem[] = [
-  {
-    id: 'c5',
-    title: 'Investigate pricing page drop-off',
-    preview: 'GA4 shows 23% drop in /pricing conversion. Need to dig into segment data.',
-    source: 'manual',
-    time: '3h ago',
-  },
-  {
-    id: 'c6',
-    title: 'Follow up with Sarah on API docs',
-    preview: 'She mentioned new endpoints are undocumented. Check Slack thread.',
-    source: 'slack',
-    time: '5h ago',
-  },
-  {
-    id: 'c7',
-    title: 'Review HubSpot lead scoring rules',
-    preview: 'Marketing asked to revisit lead scoring weights for Q2.',
-    source: 'gmail',
-    time: '1d ago',
-  },
-];
-
-const ideaItems: CortexItem[] = [
-  {
-    id: 'c8',
-    title: 'Automated weekly digest email',
-    preview: 'Send a summary of key metrics + tasks completed to the team every Friday.',
-    time: '2d ago',
-  },
-  {
-    id: 'c9',
-    title: 'CLI tool for quick task creation',
-    preview: 'Would be nice to capture tasks from terminal without opening browser.',
-    time: '3d ago',
-  },
-  {
-    id: 'c10',
-    title: 'Integration with Linear for eng tasks',
-    preview: 'Two-way sync so engineering tickets auto-surface in Cortex.',
-    time: '5d ago',
-  },
-  {
-    id: 'c11',
-    title: 'Dark mode toggle per-workspace',
-    preview: 'Some users might want light mode for specific workstreams or data views.',
-    time: '1w ago',
-  },
-];
 
 const sourceIcon: Record<string, React.ComponentType<{ className?: string }>> = {
   slack: MessageSquare,
@@ -126,11 +47,17 @@ function CortexColumn({
   icon: Icon,
   count,
   items,
+  onConvertToTask,
+  onArchive,
+  archiving,
 }: {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
   count: number;
-  items: CortexItem[];
+  items: Task[];
+  onConvertToTask: (item: Task) => void;
+  onArchive: (item: Task) => void;
+  archiving: string | null;
 }) {
   return (
     <div className="flex flex-1 flex-col rounded-md border border-border-subtle bg-bg-base min-w-[280px]">
@@ -147,35 +74,65 @@ function CortexColumn({
 
       {/* Items */}
       <div className="flex-1 space-y-2 overflow-y-auto p-2">
+        {items.length === 0 && (
+          <p className="py-4 text-center text-xs text-text-tertiary">No items</p>
+        )}
         {items.map((item) => {
-          const SourceIcon = item.source ? sourceIcon[item.source] : Brain;
+          const SourceIcon = item.source_type
+            ? sourceIcon[item.source_type] ?? Brain
+            : Brain;
+          const isArchiving = archiving === item.id;
           return (
             <div
               key={item.id}
               className="rounded-md border border-border-subtle bg-bg-surface p-3 transition-colors hover:bg-bg-elevated cursor-pointer"
             >
               <div className="flex items-start gap-2">
-                {SourceIcon && (
-                  <SourceIcon className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" />
-                )}
+                <SourceIcon className="mt-0.5 h-4 w-4 shrink-0 text-text-tertiary" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-text-primary leading-snug">
                     {item.title}
                   </p>
-                  <p className="mt-1 text-xs text-text-tertiary line-clamp-2">
-                    {item.preview}
-                  </p>
+                  {item.description && (
+                    <p className="mt-1 text-xs text-text-tertiary line-clamp-2">
+                      {item.description}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="mt-2 flex items-center justify-between">
-                <span className="text-[10px] text-text-tertiary">{item.time}</span>
+                <span className="text-[10px] text-text-tertiary">
+                  {new Date(item.created_at).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </span>
                 <div className="flex gap-1">
-                  <Button variant="ghost" size="sm">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onConvertToTask(item);
+                    }}
+                  >
                     <ArrowRight className="h-3 w-3" />
                     Task
                   </Button>
-                  <Button variant="ghost" size="sm">
-                    <Archive className="h-3 w-3" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={isArchiving}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onArchive(item);
+                    }}
+                  >
+                    {isArchiving ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Archive className="h-3 w-3" />
+                    )}
                   </Button>
                 </div>
               </div>
@@ -192,6 +149,130 @@ function CortexColumn({
 // ---------------------------------------------------------------------------
 
 export default function CortexPage() {
+  const [items, setItems] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [captureText, setCaptureText] = useState('');
+  const [capturing, setCapturing] = useState(false);
+  const [archiving, setArchiving] = useState<string | null>(null);
+  const [workstreams, setWorkstreams] = useState<Workstream[]>([]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogDefaultTitle, setDialogDefaultTitle] = useState('');
+
+  // -------------------------------------------------------------------------
+  // Fetch data
+  // -------------------------------------------------------------------------
+
+  const fetchItems = useCallback(async () => {
+    try {
+      const res = await fetch('/api/tasks?cortex=true');
+      if (!res.ok) throw new Error('Failed to fetch');
+      const data: Task[] = await res.json();
+      setItems(data);
+    } catch (err) {
+      console.error('Failed to fetch cortex items:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchItems();
+  }, [fetchItems]);
+
+  useEffect(() => {
+    async function fetchWorkstreams() {
+      try {
+        const res = await fetch('/api/workstreams');
+        if (!res.ok) return;
+        setWorkstreams(await res.json());
+      } catch (err) {
+        console.error('Failed to fetch workstreams:', err);
+      }
+    }
+    fetchWorkstreams();
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // Quick capture
+  // -------------------------------------------------------------------------
+
+  const handleCapture = async () => {
+    if (!captureText.trim() || capturing) return;
+    setCapturing(true);
+    try {
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: captureText.trim(),
+          is_cortex_item: true,
+          cortex_category: 'inbox',
+        }),
+      });
+      if (!res.ok) throw new Error('Failed to capture');
+      const created: Task = await res.json();
+      setItems((prev) => [created, ...prev]);
+      setCaptureText('');
+    } catch (err) {
+      console.error('Failed to capture item:', err);
+    } finally {
+      setCapturing(false);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Archive (mark as done)
+  // -------------------------------------------------------------------------
+
+  const handleArchive = async (item: Task) => {
+    setArchiving(item.id);
+    try {
+      const res = await fetch(`/api/tasks/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done' }),
+      });
+      if (!res.ok) throw new Error('Failed to archive');
+      setItems((prev) => prev.filter((i) => i.id !== item.id));
+    } catch (err) {
+      console.error('Failed to archive item:', err);
+    } finally {
+      setArchiving(null);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Convert to task (open dialog with title pre-filled)
+  // -------------------------------------------------------------------------
+
+  const handleConvertToTask = (item: Task) => {
+    setDialogDefaultTitle(item.title);
+    setDialogOpen(true);
+  };
+
+  // -------------------------------------------------------------------------
+  // Group items by cortex category
+  // -------------------------------------------------------------------------
+
+  const inboxItems = items.filter(
+    (i) => i.cortex_category === 'inbox' && i.status !== 'done'
+  );
+  const triageItems = items.filter(
+    (i) => i.cortex_category === 'triage' && i.status !== 'done'
+  );
+  const ideaItems = items.filter(
+    (i) =>
+      (i.cortex_category === 'idea' || i.cortex_category === 'assistant_suggestion') &&
+      i.status !== 'done'
+  );
+
+  // If there are items without a category, put them in inbox
+  const uncategorized = items.filter(
+    (i) => !i.cortex_category && i.status !== 'done'
+  );
+
+  const allInbox = [...inboxItems, ...uncategorized];
+
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -211,11 +292,21 @@ export default function CortexPage() {
       {/* Quick capture bar */}
       <div className="border-b border-border-subtle px-6 py-3">
         <div className="flex items-center gap-2 rounded-md border border-border-default bg-bg-surface px-3 py-2 transition-colors focus-within:border-accent-500 focus-within:ring-1 focus-within:ring-accent-500/30">
-          <Plus className="h-4 w-4 text-text-tertiary shrink-0" />
+          {capturing ? (
+            <Loader2 className="h-4 w-4 text-text-tertiary shrink-0 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4 text-text-tertiary shrink-0" />
+          )}
           <input
             type="text"
+            value={captureText}
+            onChange={(e) => setCaptureText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleCapture();
+            }}
             placeholder="Capture a thought, task, or idea... (Cmd+Shift+N)"
             className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none"
+            disabled={capturing}
           />
           <kbd className="rounded bg-bg-elevated px-1.5 py-0.5 font-mono text-[10px] text-text-tertiary">
             {'\u21E7\u2318N'}
@@ -224,26 +315,67 @@ export default function CortexPage() {
       </div>
 
       {/* Three column triage layout */}
-      <div className="flex flex-1 gap-3 overflow-x-auto p-4">
-        <CortexColumn
-          title="Inbox"
-          icon={Inbox}
-          count={inboxItems.length}
-          items={inboxItems}
-        />
-        <CortexColumn
-          title="Triage"
-          icon={Filter}
-          count={triageItems.length}
-          items={triageItems}
-        />
-        <CortexColumn
-          title="Ideas"
-          icon={Lightbulb}
-          count={ideaItems.length}
-          items={ideaItems}
-        />
-      </div>
+      {loading ? (
+        <div className="flex flex-1 gap-3 overflow-x-auto p-4">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="flex flex-1 flex-col rounded-md border border-border-subtle bg-bg-base min-w-[280px]"
+            >
+              <div className="flex items-center gap-2 border-b border-border-subtle px-3 py-2">
+                <div className="h-4 w-16 animate-pulse rounded bg-bg-elevated" />
+              </div>
+              <div className="flex-1 space-y-2 p-2">
+                {[1, 2, 3].map((j) => (
+                  <div
+                    key={j}
+                    className="h-20 animate-pulse rounded-md bg-bg-elevated"
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-1 gap-3 overflow-x-auto p-4">
+          <CortexColumn
+            title="Inbox"
+            icon={Inbox}
+            count={allInbox.length}
+            items={allInbox}
+            onConvertToTask={handleConvertToTask}
+            onArchive={handleArchive}
+            archiving={archiving}
+          />
+          <CortexColumn
+            title="Triage"
+            icon={Filter}
+            count={triageItems.length}
+            items={triageItems}
+            onConvertToTask={handleConvertToTask}
+            onArchive={handleArchive}
+            archiving={archiving}
+          />
+          <CortexColumn
+            title="Ideas"
+            icon={Lightbulb}
+            count={ideaItems.length}
+            items={ideaItems}
+            onConvertToTask={handleConvertToTask}
+            onArchive={handleArchive}
+            archiving={archiving}
+          />
+        </div>
+      )}
+
+      {/* New Task Dialog */}
+      <NewTaskDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onCreated={() => fetchItems()}
+        defaultTitle={dialogDefaultTitle}
+        workstreams={workstreams}
+      />
     </div>
   );
 }

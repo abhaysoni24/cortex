@@ -9,6 +9,9 @@ interface UIState {
   setActiveSlideOver: (id: string | null) => void;
   activeView: 'kanban' | 'list' | 'plan' | 'agenda' | 'data';
   setActiveView: (view: 'kanban' | 'list' | 'plan' | 'agenda' | 'data') => void;
+  assistantPanelOpen: boolean;
+  toggleAssistantPanel: () => void;
+  setAssistantPanelOpen: (open: boolean) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -20,4 +23,7 @@ export const useUIStore = create<UIState>((set) => ({
   setActiveSlideOver: (id) => set({ activeSlideOver: id }),
   activeView: 'kanban',
   setActiveView: (view) => set({ activeView: view }),
+  assistantPanelOpen: false,
+  toggleAssistantPanel: () => set((s) => ({ assistantPanelOpen: !s.assistantPanelOpen })),
+  setAssistantPanelOpen: (open) => set({ assistantPanelOpen: open }),
 }));

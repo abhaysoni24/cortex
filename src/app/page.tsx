@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useEffect, useState } from 'react';
 import {
   MessageSquare,
   Mail,
@@ -12,73 +13,27 @@ import {
 import { cn } from '@/lib/utils/cn';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { NewTaskDialog } from '@/components/tasks/new-task-dialog';
+import type { Task } from '@/stores/task-store';
 
 // ---------------------------------------------------------------------------
-// Placeholder data
+// Types
 // ---------------------------------------------------------------------------
 
-const priorityTasks = [
-  { id: '1', title: 'Ship onboarding flow v2', due: 'Today', priority: 'p0' as const },
-  { id: '2', title: 'Review GA4 funnel drop-off', due: 'Today', priority: 'p0' as const },
-  { id: '3', title: 'Prepare board deck slides', due: 'Tomorrow', priority: 'p1' as const },
-  { id: '4', title: 'Write Q1 growth retrospective', due: 'Mar 13', priority: 'p1' as const },
-  { id: '5', title: 'Update design system tokens', due: 'Mar 14', priority: 'p2' as const },
-];
+interface Workstream {
+  id: string;
+  name: string;
+  slug: string;
+  color: string | null;
+}
 
+// Placeholder schedule data (calendar integration is separate)
 const schedule = [
   { time: '9:00 AM', title: 'Daily standup', duration: '15m' },
   { time: '10:00 AM', title: 'Growth strategy sync', duration: '45m' },
   { time: '11:30 AM', title: 'Deep work block', duration: '90m', isBlock: true },
   { time: '2:00 PM', title: '1:1 with Sarah (Eng)', duration: '30m' },
   { time: '3:30 PM', title: 'Product review', duration: '60m' },
-];
-
-const signals = [
-  {
-    id: '1',
-    source: 'slack' as const,
-    channel: '#growth',
-    preview: 'Alex: "Can we move the A/B test launch to Thursday?"',
-    time: '12m ago',
-  },
-  {
-    id: '2',
-    source: 'gmail' as const,
-    channel: 'Investor update',
-    preview: 'Draft review needed for Q1 investor letter',
-    time: '34m ago',
-  },
-  {
-    id: '3',
-    source: 'calendar' as const,
-    channel: 'Calendar',
-    preview: 'Board meeting moved to Friday 3 PM',
-    time: '1h ago',
-  },
-  {
-    id: '4',
-    source: 'slack' as const,
-    channel: '#platform',
-    preview: 'Deploy pipeline failing on staging — needs attention',
-    time: '2h ago',
-  },
-];
-
-const workstreams = [
-  { name: 'Growth', color: 'bg-status-success', progress: 72 },
-  { name: 'Platform', color: 'bg-status-info', progress: 45 },
-  { name: 'Analytics', color: 'bg-accent-500', progress: 88 },
-  { name: 'Design System', color: 'bg-purple-500', progress: 31 },
-];
-
-const overdueItems = [
-  { id: 'o1', title: 'Finalize pricing page copy', due: '2 days ago', priority: 'p1' as const },
-  { id: 'o2', title: 'Deploy tracking pixel fix', due: '1 day ago', priority: 'p0' as const },
-];
-
-const blockedItems = [
-  { id: 'b1', title: 'Launch email drip campaign', blocker: 'Waiting on legal review' },
-  { id: 'b2', title: 'Migrate BigQuery dataset', blocker: 'Blocked by infra team' },
 ];
 
 // ---------------------------------------------------------------------------
@@ -99,21 +54,189 @@ const sourceIcon: Record<string, React.ComponentType<{ className?: string }>> = 
 };
 
 // ---------------------------------------------------------------------------
+// Format date helper
+// ---------------------------------------------------------------------------
+
+function formatDueDate(dateStr: string | null): string | null {
+  if (!dateStr) return null;
+  const date = new Date(dateStr);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const due = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const diffDays = Math.round((due.getTime() - today.getTime()) / 86400000);
+
+  if (diffDays < 0) return `${Math.abs(diffDays)}d ago`;
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Tomorrow';
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export default function CommandCenterPage() {
+  const [allTasks, setAllTasks] = useState<Task[]>([]);
+  const [workstreams, setWorkstreams] = useState<Workstream[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogDefaultTitle, setDialogDefaultTitle] = useState('');
+
+  // -------------------------------------------------------------------------
+  // Fetch data
+  // -------------------------------------------------------------------------
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [tasksRes, wsRes] = await Promise.all([
+        fetch('/api/tasks'),
+        fetch('/api/workstreams'),
+      ]);
+      if (tasksRes.ok) {
+        const tasks: Task[] = await tasksRes.json();
+        setAllTasks(tasks);
+      }
+      if (wsRes.ok) {
+        const ws: Workstream[] = await wsRes.json();
+        setWorkstreams(ws);
+      }
+    } catch (err) {
+      console.error('Failed to fetch data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // -------------------------------------------------------------------------
+  // Derived data
+  // -------------------------------------------------------------------------
+
+  // Priority stack: top 5 non-done tasks sorted by priority
+  const priorityTasks = allTasks
+    .filter((t) => t.status !== 'done')
+    .sort((a, b) => {
+      const order = { p0: 0, p1: 1, p2: 2, p3: 3 };
+      return order[a.priority] - order[b.priority];
+    })
+    .slice(0, 5);
+
+  // Incoming signals (cortex inbox items from external sources)
+  const signals = allTasks
+    .filter(
+      (t) =>
+        t.is_cortex_item &&
+        t.status !== 'done' &&
+        t.source_type !== 'manual'
+    )
+    .slice(0, 4);
+
+  // Overdue tasks
+  const now = new Date();
+  const overdueItems = allTasks.filter((t) => {
+    if (t.status === 'done' || !t.due_date) return false;
+    return new Date(t.due_date) < now;
+  });
+
+  // Blocked tasks
+  const blockedItems = allTasks.filter((t) => t.status === 'blocked');
+
+  // Workstream health: calculate progress as % of tasks done
+  const workstreamHealth = workstreams.map((ws) => {
+    const wsTasks = allTasks.filter((t) => t.workstream_id === ws.id);
+    const totalTasks = wsTasks.length;
+    const doneTasks = wsTasks.filter((t) => t.status === 'done').length;
+    const progress = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
+    return { ...ws, progress, totalTasks };
+  });
+
+  // Summary stats
+  const todayTasks = allTasks.filter((t) => {
+    if (t.status === 'done') return false;
+    if (!t.due_date) return false;
+    const d = new Date(t.due_date);
+    return (
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // Signal action handler
+  // -------------------------------------------------------------------------
+
+  const handleSignalToTask = (signal: Task) => {
+    setDialogDefaultTitle(signal.title);
+    setDialogOpen(true);
+  };
+
+  const handleDismissSignal = async (signal: Task) => {
+    try {
+      await fetch(`/api/tasks/${signal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done' }),
+      });
+      setAllTasks((prev) => prev.filter((t) => t.id !== signal.id));
+    } catch (err) {
+      console.error('Failed to dismiss signal:', err);
+    }
+  };
+
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
+
+  if (loading) {
+    return (
+      <div className="space-y-4 p-6">
+        <div className="h-6 w-40 animate-pulse rounded bg-bg-elevated" />
+        <div className="h-16 animate-pulse rounded-md bg-bg-elevated" />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="h-48 animate-pulse rounded-md bg-bg-elevated" />
+          <div className="h-48 animate-pulse rounded-md bg-bg-elevated" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 p-6">
       {/* Page header */}
       <h1 className="text-lg font-semibold text-text-primary">Command Center</h1>
 
-      {/* Daily Briefing — full width */}
+      {/* Daily Briefing */}
       <div className="rounded-md border border-border-subtle border-l-2 border-l-accent-500 bg-bg-surface p-4">
         <p className="text-sm text-text-secondary">
-          Good morning. <span className="text-text-primary font-medium">7 tasks</span> today,{' '}
-          <span className="text-text-primary font-medium">3 meetings</span>,{' '}
-          <span className="text-status-danger font-medium">2 blockers</span>.
+          Good morning.{' '}
+          <span className="text-text-primary font-medium">
+            {todayTasks.length} task{todayTasks.length !== 1 ? 's' : ''}
+          </span>{' '}
+          due today,{' '}
+          <span className="text-text-primary font-medium">
+            {priorityTasks.length} active
+          </span>
+          {overdueItems.length > 0 && (
+            <>
+              ,{' '}
+              <span className="text-status-danger font-medium">
+                {overdueItems.length} overdue
+              </span>
+            </>
+          )}
+          {blockedItems.length > 0 && (
+            <>
+              ,{' '}
+              <span className="text-status-danger font-medium">
+                {blockedItems.length} blocker{blockedItems.length !== 1 ? 's' : ''}
+              </span>
+            </>
+          )}
+          .
         </p>
       </div>
 
@@ -125,6 +248,11 @@ export default function CommandCenterPage() {
             Priority Stack
           </h2>
           <div className="space-y-2">
+            {priorityTasks.length === 0 && (
+              <p className="text-xs text-text-tertiary py-2">
+                No active tasks
+              </p>
+            )}
             {priorityTasks.map((task) => (
               <div
                 key={task.id}
@@ -139,7 +267,9 @@ export default function CommandCenterPage() {
                 <span className="flex-1 truncate text-sm text-text-primary">
                   {task.title}
                 </span>
-                <span className="shrink-0 text-xs text-text-tertiary">{task.due}</span>
+                <span className="shrink-0 text-xs text-text-tertiary">
+                  {formatDueDate(task.due_date) ?? '--'}
+                </span>
               </div>
             ))}
           </div>
@@ -182,11 +312,18 @@ export default function CommandCenterPage() {
             <h2 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
               Incoming Signals
             </h2>
-            <Badge variant="status-warning">{signals.length}</Badge>
+            {signals.length > 0 && (
+              <Badge variant="status-warning">{signals.length}</Badge>
+            )}
           </div>
           <div className="space-y-2">
+            {signals.length === 0 && (
+              <p className="text-xs text-text-tertiary py-2">
+                No incoming signals
+              </p>
+            )}
             {signals.map((signal) => {
-              const SourceIcon = sourceIcon[signal.source];
+              const SourceIcon = sourceIcon[signal.source_type] ?? MessageSquare;
               return (
                 <div
                   key={signal.id}
@@ -196,20 +333,33 @@ export default function CommandCenterPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium text-text-secondary">
-                        {signal.channel}
+                        {signal.source_type}
                       </span>
-                      <span className="text-[10px] text-text-tertiary">{signal.time}</span>
+                      <span className="text-[10px] text-text-tertiary">
+                        {new Date(signal.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </span>
                     </div>
                     <p className="mt-0.5 truncate text-sm text-text-primary">
-                      {signal.preview}
+                      {signal.title}
                     </p>
                   </div>
                   <div className="flex shrink-0 gap-1">
-                    <Button variant="ghost" size="sm">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSignalToTask(signal)}
+                    >
                       <ArrowRight className="h-3 w-3" />
                       Task
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDismissSignal(signal)}
+                    >
                       <X className="h-3 w-3" />
                     </Button>
                   </div>
@@ -225,23 +375,43 @@ export default function CommandCenterPage() {
             Workstreams
           </h2>
           <div className="space-y-3">
-            {workstreams.map((ws) => (
-              <div key={ws.name} className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className={cn('h-2 w-2 rounded-full', ws.color)} />
-                    <span className="text-sm text-text-primary">{ws.name}</span>
+            {workstreamHealth.length === 0 && (
+              <p className="text-xs text-text-tertiary py-2">
+                No workstreams yet
+              </p>
+            )}
+            {workstreamHealth.map((ws) => {
+              const colorStyle = ws.color?.startsWith('#')
+                ? { backgroundColor: ws.color }
+                : undefined;
+              const colorClass =
+                ws.color && !ws.color.startsWith('#') ? ws.color : 'bg-accent-500';
+              return (
+                <div key={ws.id} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={cn('h-2 w-2 rounded-full', colorStyle ? '' : colorClass)}
+                        style={colorStyle}
+                      />
+                      <span className="text-sm text-text-primary">{ws.name}</span>
+                    </div>
+                    <span className="text-xs font-mono text-text-tertiary">
+                      {ws.progress}%
+                    </span>
                   </div>
-                  <span className="text-xs font-mono text-text-tertiary">{ws.progress}%</span>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-elevated">
+                    <div
+                      className={cn('h-full rounded-full', colorStyle ? '' : colorClass)}
+                      style={{
+                        width: `${ws.progress}%`,
+                        ...(colorStyle ?? {}),
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-bg-elevated">
-                  <div
-                    className={cn('h-full rounded-full', ws.color)}
-                    style={{ width: `${ws.progress}%` }}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -257,6 +427,9 @@ export default function CommandCenterPage() {
             </h2>
           </div>
           <div className="space-y-2">
+            {overdueItems.length === 0 && (
+              <p className="text-xs text-text-tertiary py-2">All clear</p>
+            )}
             {overdueItems.map((item) => (
               <div
                 key={item.id}
@@ -271,7 +444,9 @@ export default function CommandCenterPage() {
                 <span className="flex-1 truncate text-sm text-text-primary">
                   {item.title}
                 </span>
-                <span className="shrink-0 text-xs text-status-danger">{item.due}</span>
+                <span className="shrink-0 text-xs text-status-danger">
+                  {formatDueDate(item.due_date)}
+                </span>
               </div>
             ))}
           </div>
@@ -286,6 +461,9 @@ export default function CommandCenterPage() {
             </h2>
           </div>
           <div className="space-y-2">
+            {blockedItems.length === 0 && (
+              <p className="text-xs text-text-tertiary py-2">No blockers</p>
+            )}
             {blockedItems.map((item) => (
               <div
                 key={item.id}
@@ -294,13 +472,26 @@ export default function CommandCenterPage() {
                 <Ban className="mt-0.5 h-3.5 w-3.5 shrink-0 text-status-danger" />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-text-primary">{item.title}</p>
-                  <p className="text-xs text-text-tertiary">{item.blocker}</p>
+                  {item.description && (
+                    <p className="text-xs text-text-tertiary line-clamp-1">
+                      {item.description}
+                    </p>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         </div>
       </div>
+
+      {/* New Task Dialog */}
+      <NewTaskDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onCreated={() => fetchData()}
+        defaultTitle={dialogDefaultTitle}
+        workstreams={workstreams}
+      />
     </div>
   );
 }

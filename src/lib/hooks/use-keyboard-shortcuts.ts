@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useUIStore } from '@/stores/ui-store';
 
 export function useKeyboardShortcuts() {
-  const { toggleSidebar, setCommandPaletteOpen } = useUIStore();
+  const { toggleSidebar, setCommandPaletteOpen, toggleAssistantPanel, setAssistantPanelOpen } = useUIStore();
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -50,13 +50,19 @@ export function useKeyboardShortcuts() {
         window.location.href = '/calendar';
       }
 
+      if (mod && e.key === 'j') {
+        e.preventDefault();
+        toggleAssistantPanel();
+      }
+
       if (e.key === 'Escape') {
         setCommandPaletteOpen(false);
+        setAssistantPanelOpen(false);
         useUIStore.getState().setActiveSlideOver(null);
       }
     }
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [toggleSidebar, setCommandPaletteOpen]);
+  }, [toggleSidebar, setCommandPaletteOpen, toggleAssistantPanel, setAssistantPanelOpen]);
 }

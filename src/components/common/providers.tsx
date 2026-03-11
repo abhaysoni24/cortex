@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CommandPalette } from '@/components/common/command-palette';
+import { AssistantPanel } from '@/components/assistant/assistant-panel';
 import { AppShell } from '@/components/layout/app-shell';
 import { useUIStore } from '@/stores/ui-store';
 
@@ -51,6 +52,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         open={commandPaletteOpen}
         onOpenChange={setCommandPaletteOpen}
       />
+      <AssistantPanel />
       <AppShell>{children}</AppShell>
     </QueryClientProvider>
   );

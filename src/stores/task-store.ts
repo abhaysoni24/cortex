@@ -1,28 +1,32 @@
 import { create } from 'zustand';
 
 // ---------------------------------------------------------------------------
-// Inline types (mirrors the DB schema but avoids importing server-side code)
+// Inline types (mirrors the DB schema enums)
 // ---------------------------------------------------------------------------
 
-type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'done' | 'cancelled';
-type TaskPriority = 'urgent' | 'high' | 'medium' | 'low' | 'none';
-type TaskEnergyLevel = 'high' | 'medium' | 'low';
+export type TaskStatus = 'inbox' | 'planned' | 'in_progress' | 'waiting' | 'blocked' | 'done';
+export type TaskPriority = 'p0' | 'p1' | 'p2' | 'p3';
+export type CortexCategory = 'inbox' | 'triage' | 'idea' | 'assistant_suggestion';
 
-interface Task {
+export interface Task {
   id: string;
   title: string;
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
-  energy_level: TaskEnergyLevel | null;
   workstream_id: string | null;
+  parent_task_id: string | null;
   due_date: string | null; // ISO date string
-  scheduled_date: string | null;
-  completed_at: string | null;
   sort_order: number;
   is_cortex_item: boolean;
+  cortex_category: CortexCategory | null;
+  source_type: string;
   created_at: string;
   updated_at: string;
+  completed_at: string | null;
+  subtask_count?: number;
+  subtasks_done?: number;
+  tags?: { id: string; name: string; color: string | null }[];
 }
 
 // ---------------------------------------------------------------------------
@@ -34,7 +38,9 @@ interface TaskState {
 
   // Computed getters
   tasksByWorkstream: (workstreamId: string) => Task[];
+  tasksByStatus: (status: TaskStatus) => Task[];
   cortexTasks: () => Task[];
+  priorityTasks: (limit?: number) => Task[];
 
   // CRUD actions
   addTask: (task: Task) => void;
@@ -44,8 +50,6 @@ interface TaskState {
   // Workflow helpers
   moveTask: (id: string, status: TaskStatus) => void;
   reorderTask: (id: string, newSortOrder: number) => void;
-  setTaskPriority: (id: string, priority: TaskPriority) => void;
-  setTaskDueDate: (id: string, dueDate: string | null) => void;
 
   // Bulk setter (useful after fetching from API)
   setTasks: (tasks: Task[]) => void;
@@ -61,10 +65,24 @@ export const useTaskStore = create<TaskState>((set, get) => ({
       .filter((t) => t.workstream_id === workstreamId)
       .sort((a, b) => a.sort_order - b.sort_order),
 
+  tasksByStatus: (status) =>
+    Object.values(get().tasks)
+      .filter((t) => t.status === status)
+      .sort((a, b) => a.sort_order - b.sort_order),
+
   cortexTasks: () =>
     Object.values(get().tasks)
       .filter((t) => t.is_cortex_item)
       .sort((a, b) => a.sort_order - b.sort_order),
+
+  priorityTasks: (limit = 5) =>
+    Object.values(get().tasks)
+      .filter((t) => t.status !== 'done')
+      .sort((a, b) => {
+        const priorityOrder = { p0: 0, p1: 1, p2: 2, p3: 3 };
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      })
+      .slice(0, limit),
 
   // ---------- CRUD ----------
 
@@ -119,38 +137,6 @@ export const useTaskStore = create<TaskState>((set, get) => ({
           [id]: {
             ...existing,
             sort_order: newSortOrder,
-            updated_at: new Date().toISOString(),
-          },
-        },
-      };
-    }),
-
-  setTaskPriority: (id, priority) =>
-    set((s) => {
-      const existing = s.tasks[id];
-      if (!existing) return s;
-      return {
-        tasks: {
-          ...s.tasks,
-          [id]: {
-            ...existing,
-            priority,
-            updated_at: new Date().toISOString(),
-          },
-        },
-      };
-    }),
-
-  setTaskDueDate: (id, dueDate) =>
-    set((s) => {
-      const existing = s.tasks[id];
-      if (!existing) return s;
-      return {
-        tasks: {
-          ...s.tasks,
-          [id]: {
-            ...existing,
-            due_date: dueDate,
             updated_at: new Date().toISOString(),
           },
         },

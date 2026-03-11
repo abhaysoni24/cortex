@@ -36,7 +36,7 @@ export function TopBar() {
   const { segments } = getBreadcrumb(pathname);
 
   return (
-    <header className="flex h-12 shrink-0 items-center border-b border-border-subtle bg-bg-base px-4">
+    <header className="flex h-12 shrink-0 items-center border-b border-border-subtle bg-bg-base/80 backdrop-blur-xl px-4">
       {/* Breadcrumb */}
       <div className="flex items-center gap-1.5 text-sm">
         {segments.map((segment, i) => (
@@ -63,7 +63,7 @@ export function TopBar() {
       {/* Command palette trigger */}
       <button
         onClick={() => setCommandPaletteOpen(true)}
-        className="mx-4 flex max-w-[400px] flex-1 cursor-pointer items-center gap-2 rounded-md border border-border-subtle bg-bg-surface px-3 py-1.5 text-sm text-text-tertiary transition-colors hover:border-border-default hover:text-text-secondary"
+        className="mx-4 flex max-w-[400px] flex-1 cursor-pointer items-center gap-2 rounded-md border border-border-subtle bg-bg-surface/80 backdrop-blur-sm px-3 py-1.5 text-sm text-text-tertiary transition-all duration-200 hover:border-accent-500/40 hover:text-text-secondary hover:shadow-[0_0_15px_rgba(168,85,247,0.15)] focus:border-accent-500/60 focus:shadow-[0_0_20px_rgba(168,85,247,0.25)]"
       >
         <Search className="h-3.5 w-3.5 shrink-0" />
         <span className="flex-1 text-left">Search or type a command...</span>
