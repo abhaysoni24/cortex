@@ -5,13 +5,16 @@ import {
   text,
   varchar,
   integer,
+  bigint,
   boolean,
   timestamp,
   date,
   jsonb,
   unique,
+  primaryKey,
 } from 'drizzle-orm/pg-core';
 import { relations, sql } from 'drizzle-orm';
+import type { AdapterAccountType } from '@auth/core/adapters';
 
 // ---------------------------------------------------------------------------
 // Enums
@@ -84,6 +87,95 @@ export const dataQuerySourceEnum = pgEnum('data_query_source', [
   'hubspot',
   'ga4',
 ]);
+
+export const integrationProviderEnum = pgEnum('integration_provider', [
+  'slack',
+  'bigquery',
+  'hubspot',
+  'ga4',
+]);
+
+export const integrationStatusEnum = pgEnum('integration_status', [
+  'connected',
+  'not_configured',
+  'auth_error',
+  'api_error',
+]);
+
+// ---------------------------------------------------------------------------
+// NextAuth Tables
+// ---------------------------------------------------------------------------
+
+export const users = pgTable('users', {
+  id: uuid('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  name: text('name'),
+  email: text('email').unique(),
+  emailVerified: timestamp('emailVerified', { mode: 'date' }),
+  image: text('image'),
+});
+
+export const accounts = pgTable(
+  'accounts',
+  {
+    userId: uuid('userId')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').$type<AdapterAccountType>().notNull(),
+    provider: text('provider').notNull(),
+    providerAccountId: text('providerAccountId').notNull(),
+    refresh_token: text('refresh_token'),
+    access_token: text('access_token'),
+    expires_at: integer('expires_at'),
+    token_type: text('token_type'),
+    scope: text('scope'),
+    id_token: text('id_token'),
+    session_state: text('session_state'),
+  },
+  (account) => [
+    primaryKey({ columns: [account.provider, account.providerAccountId] }),
+  ]
+);
+
+export const sessions = pgTable('sessions', {
+  sessionToken: text('sessionToken').primaryKey(),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  expires: timestamp('expires', { mode: 'date' }).notNull(),
+});
+
+export const verificationTokens = pgTable(
+  'verificationTokens',
+  {
+    identifier: text('identifier').notNull(),
+    token: text('token').notNull(),
+    expires: timestamp('expires', { mode: 'date' }).notNull(),
+  },
+  (vt) => [primaryKey({ columns: [vt.identifier, vt.token] })]
+);
+
+// ---------------------------------------------------------------------------
+// Integration Credentials (non-Google services)
+// ---------------------------------------------------------------------------
+
+export const integrationCredentials = pgTable('integration_credentials', {
+  id: uuid('id')
+    .primaryKey()
+    .default(sql`gen_random_uuid()`),
+  provider: integrationProviderEnum('provider').notNull().unique(),
+  credentials: jsonb('credentials').notNull(),
+  status: integrationStatusEnum('status').notNull().default('not_configured'),
+  lastSyncAt: timestamp('last_sync_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 // ---------------------------------------------------------------------------
 // Tables

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { SessionProvider } from 'next-auth/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { CommandPalette } from '@/components/common/command-palette';
 import { AssistantPanel } from '@/components/assistant/assistant-panel';
@@ -47,13 +48,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [commandPaletteOpen, setCommandPaletteOpen]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <CommandPalette
-        open={commandPaletteOpen}
-        onOpenChange={setCommandPaletteOpen}
-      />
-      <AssistantPanel />
-      <AppShell>{children}</AppShell>
-    </QueryClientProvider>
+    <SessionProvider>
+      <QueryClientProvider client={queryClient}>
+        <CommandPalette
+          open={commandPaletteOpen}
+          onOpenChange={setCommandPaletteOpen}
+        />
+        <AssistantPanel />
+        <AppShell>{children}</AppShell>
+      </QueryClientProvider>
+    </SessionProvider>
   );
 }

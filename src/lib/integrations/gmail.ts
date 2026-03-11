@@ -2,14 +2,10 @@
  * Gmail Integration
  *
  * Auth: OAuth 2.0 with Google API (Gmail scope)
- * Sync: Webhook (push notifications via Pub/Sub) + periodic poll
- * Entities: Email threads in inbox, important/starred
- *
- * Capabilities:
- * - Pull: inbox threads, important threads, starred
- * - Action: Convert thread -> task, link thread to task
- * - Display: Email context within task detail
+ * Uses googleapis SDK with access tokens from NextAuth.
  */
+
+import { google } from 'googleapis';
 
 export interface GmailThread {
   id: string;
@@ -28,24 +24,116 @@ export interface GmailConfig {
 
 /**
  * Fetch threads currently in the user's inbox.
- * Uses Gmail API threads.list with labelIds=INBOX.
  */
-export async function fetchInboxThreads(config: GmailConfig): Promise<GmailThread[]> {
-  // TODO: Implement Gmail API call to fetch inbox threads
-  // Uses threads.list with labelIds=INBOX, then threads.get for details
-  console.log('Gmail: fetchInboxThreads not yet implemented');
-  return [];
+export async function fetchInboxThreads(
+  config: GmailConfig,
+  maxResults = 15
+): Promise<GmailThread[]> {
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: config.accessToken });
+
+  const gmail = google.gmail({ version: 'v1', auth });
+
+  const listRes = await gmail.users.threads.list({
+    userId: 'me',
+    labelIds: ['INBOX'],
+    maxResults,
+  });
+
+  const threadIds = listRes.data.threads ?? [];
+  if (threadIds.length === 0) return [];
+
+  const threads: GmailThread[] = [];
+
+  for (const t of threadIds) {
+    if (!t.id) continue;
+
+    const threadRes = await gmail.users.threads.get({
+      userId: 'me',
+      id: t.id,
+      format: 'METADATA',
+      metadataHeaders: ['Subject', 'From', 'Date'],
+    });
+
+    const messages = threadRes.data.messages ?? [];
+    const firstMsg = messages[0];
+    if (!firstMsg) continue;
+
+    const headers = firstMsg.payload?.headers ?? [];
+    const subject =
+      headers.find((h) => h.name === 'Subject')?.value ?? '(no subject)';
+    const from = headers.find((h) => h.name === 'From')?.value ?? '';
+    const date = headers.find((h) => h.name === 'Date')?.value ?? '';
+
+    threads.push({
+      id: t.id,
+      subject,
+      from,
+      snippet: firstMsg.snippet ?? '',
+      date,
+      labelIds: firstMsg.labelIds ?? [],
+      messageCount: messages.length,
+    });
+  }
+
+  return threads;
 }
 
 /**
- * Fetch threads marked as important by Gmail's priority model.
- * Uses Gmail API threads.list with labelIds=IMPORTANT.
+ * Fetch threads marked as important.
  */
-export async function fetchImportantThreads(config: GmailConfig): Promise<GmailThread[]> {
-  // TODO: Implement Gmail API call to fetch important threads
-  // Uses threads.list with labelIds=IMPORTANT
-  console.log('Gmail: fetchImportantThreads not yet implemented');
-  return [];
+export async function fetchImportantThreads(
+  config: GmailConfig,
+  maxResults = 10
+): Promise<GmailThread[]> {
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: config.accessToken });
+
+  const gmail = google.gmail({ version: 'v1', auth });
+
+  const listRes = await gmail.users.threads.list({
+    userId: 'me',
+    labelIds: ['IMPORTANT'],
+    maxResults,
+  });
+
+  const threadIds = listRes.data.threads ?? [];
+  if (threadIds.length === 0) return [];
+
+  const threads: GmailThread[] = [];
+
+  for (const t of threadIds) {
+    if (!t.id) continue;
+
+    const threadRes = await gmail.users.threads.get({
+      userId: 'me',
+      id: t.id,
+      format: 'METADATA',
+      metadataHeaders: ['Subject', 'From', 'Date'],
+    });
+
+    const messages = threadRes.data.messages ?? [];
+    const firstMsg = messages[0];
+    if (!firstMsg) continue;
+
+    const headers = firstMsg.payload?.headers ?? [];
+    const subject =
+      headers.find((h) => h.name === 'Subject')?.value ?? '(no subject)';
+    const from = headers.find((h) => h.name === 'From')?.value ?? '';
+    const date = headers.find((h) => h.name === 'Date')?.value ?? '';
+
+    threads.push({
+      id: t.id,
+      subject,
+      from,
+      snippet: firstMsg.snippet ?? '',
+      date,
+      labelIds: firstMsg.labelIds ?? [],
+      messageCount: messages.length,
+    });
+  }
+
+  return threads;
 }
 
 /**

@@ -2,14 +2,10 @@
  * Google Calendar Integration
  *
  * Auth: OAuth 2.0 with Google API (Calendar scope)
- * Sync: Webhook (push notifications) + periodic poll
- * Entities: Calendar events for today and upcoming
- *
- * Capabilities:
- * - Pull: today's events, upcoming events
- * - Action: Generate meeting prep tasks, link events to tasks
- * - Display: Calendar context within task detail and briefings
+ * Uses googleapis SDK with access tokens from NextAuth.
  */
+
+import { google } from 'googleapis';
 
 export interface CalendarEvent {
   id: string;
@@ -30,28 +26,63 @@ export interface CalendarConfig {
 
 /**
  * Fetch all events for the current day.
- * Uses Calendar API events.list with timeMin/timeMax set to today's boundaries.
  */
-export async function fetchTodayEvents(config: CalendarConfig): Promise<CalendarEvent[]> {
-  // TODO: Implement Google Calendar API call to fetch today's events
-  // Uses events.list with timeMin=start of day, timeMax=end of day
-  console.log('Calendar: fetchTodayEvents not yet implemented');
-  return [];
+export async function fetchTodayEvents(
+  config: CalendarConfig
+): Promise<CalendarEvent[]> {
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfDay = new Date(startOfDay.getTime() + 24 * 60 * 60 * 1000);
+
+  return fetchEventsBetween(config, startOfDay, endOfDay);
 }
 
 /**
  * Fetch upcoming events within the specified number of days.
- * @param config - Calendar configuration with auth tokens
- * @param days - Number of days ahead to look (default: 7)
  */
 export async function fetchUpcomingEvents(
   config: CalendarConfig,
   days: number = 7
 ): Promise<CalendarEvent[]> {
-  // TODO: Implement Google Calendar API call to fetch upcoming events
-  // Uses events.list with timeMin=now, timeMax=now+days
-  console.log(`Calendar: fetchUpcomingEvents (${days} days) not yet implemented`);
-  return [];
+  const now = new Date();
+  const future = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+  return fetchEventsBetween(config, now, future);
+}
+
+async function fetchEventsBetween(
+  config: CalendarConfig,
+  timeMin: Date,
+  timeMax: Date
+): Promise<CalendarEvent[]> {
+  const auth = new google.auth.OAuth2();
+  auth.setCredentials({ access_token: config.accessToken });
+
+  const calendar = google.calendar({ version: 'v3', auth });
+
+  const res = await calendar.events.list({
+    calendarId: config.calendarId || 'primary',
+    timeMin: timeMin.toISOString(),
+    timeMax: timeMax.toISOString(),
+    singleEvents: true,
+    orderBy: 'startTime',
+    maxResults: 50,
+  });
+
+  const items = res.data.items ?? [];
+
+  return items.map((event) => ({
+    id: event.id ?? '',
+    summary: event.summary ?? '(No title)',
+    description: event.description ?? null,
+    location: event.location ?? null,
+    start: event.start?.dateTime ?? event.start?.date ?? '',
+    end: event.end?.dateTime ?? event.end?.date ?? '',
+    attendees: (event.attendees ?? [])
+      .map((a) => a.email)
+      .filter(Boolean) as string[],
+    htmlLink: event.htmlLink ?? '',
+  }));
 }
 
 /**
@@ -62,7 +93,9 @@ export async function convertToSignal(event: CalendarEvent) {
     source: 'calendar' as const,
     external_id: event.id,
     title: `Meeting: ${event.summary}`,
-    preview: event.description?.slice(0, 200) ?? `${event.summary} at ${event.start}`,
+    preview:
+      event.description?.slice(0, 200) ??
+      `${event.summary} at ${event.start}`,
     metadata: {
       summary: event.summary,
       description: event.description,
@@ -77,23 +110,16 @@ export async function convertToSignal(event: CalendarEvent) {
 
 /**
  * Generate suggested prep tasks for a meeting based on its metadata.
- *
- * Uses heuristics (and eventually LLM) to suggest actions like:
- * - Review agenda / shared docs
- * - Pull relevant data from integrations (HubSpot, BigQuery, etc.)
- * - Prepare talking points based on attendee context
- *
- * @param event - The calendar event to generate prep suggestions for
- * @returns Array of suggested prep task descriptions
  */
-export async function generatePrepSuggestions(event: CalendarEvent): Promise<string[]> {
-  // TODO: Implement with LLM or rule-based logic
-  // For MVP, return basic heuristic suggestions
-
+export async function generatePrepSuggestions(
+  event: CalendarEvent
+): Promise<string[]> {
   const suggestions: string[] = [];
 
   if (event.attendees.length > 0) {
-    suggestions.push(`Review context for ${event.attendees.length} attendee(s)`);
+    suggestions.push(
+      `Review context for ${event.attendees.length} attendee(s)`
+    );
   }
 
   if (event.description) {
@@ -104,12 +130,18 @@ export async function generatePrepSuggestions(event: CalendarEvent): Promise<str
     suggestions.push('Prepare status update and key metrics');
   }
 
-  if (event.summary.toLowerCase().includes('1:1') || event.summary.toLowerCase().includes('1-on-1')) {
+  if (
+    event.summary.toLowerCase().includes('1:1') ||
+    event.summary.toLowerCase().includes('1-on-1')
+  ) {
     suggestions.push('Review action items from last 1:1');
     suggestions.push('Prepare discussion topics and blockers');
   }
 
-  if (event.summary.toLowerCase().includes('standup') || event.summary.toLowerCase().includes('stand-up')) {
+  if (
+    event.summary.toLowerCase().includes('standup') ||
+    event.summary.toLowerCase().includes('stand-up')
+  ) {
     suggestions.push('Prepare yesterday/today/blockers update');
   }
 

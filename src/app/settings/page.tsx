@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState, useCallback } from 'react';
+import { useSession, signIn } from 'next-auth/react';
 import {
   Settings,
   MessageSquare,
@@ -9,31 +11,88 @@ import {
   BarChart3,
   PieChart,
   Keyboard,
-  RotateCw,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
 // ---------------------------------------------------------------------------
-// Placeholder data
+// Types
 // ---------------------------------------------------------------------------
 
 type IntegrationStatus = 'not_configured' | 'connected' | 'auth_error' | 'api_error';
 
-interface Integration {
+interface IntegrationDef {
+  key: string;
   name: string;
   icon: React.ComponentType<{ className?: string }>;
-  status: IntegrationStatus;
-  lastSync: string | null;
   description: string;
+  type: 'google' | 'api_key';
+  fields?: { key: string; label: string; placeholder: string }[];
 }
 
-const integrations: Integration[] = [
-  { name: 'Slack', icon: MessageSquare, status: 'not_configured', lastSync: null, description: 'Team messaging & notifications' },
-  { name: 'Gmail', icon: Mail, status: 'not_configured', lastSync: null, description: 'Email inbox & signals' },
-  { name: 'Google Calendar', icon: Calendar, status: 'not_configured', lastSync: null, description: 'Meeting prep & schedule' },
-  { name: 'BigQuery', icon: Database, status: 'not_configured', lastSync: null, description: 'SQL data warehouse' },
-  { name: 'HubSpot', icon: PieChart, status: 'not_configured', lastSync: null, description: 'CRM pipeline & contacts' },
-  { name: 'GA4', icon: BarChart3, status: 'not_configured', lastSync: null, description: 'Web analytics & metrics' },
+interface IntegrationState {
+  status: IntegrationStatus;
+  lastSync: string | null;
+}
+
+const integrationDefs: IntegrationDef[] = [
+  {
+    key: 'gmail',
+    name: 'Gmail',
+    icon: Mail,
+    description: 'Email inbox & signals',
+    type: 'google',
+  },
+  {
+    key: 'calendar',
+    name: 'Google Calendar',
+    icon: Calendar,
+    description: 'Meeting prep & schedule',
+    type: 'google',
+  },
+  {
+    key: 'slack',
+    name: 'Slack',
+    icon: MessageSquare,
+    description: 'Team messaging & notifications',
+    type: 'api_key',
+    fields: [
+      { key: 'bot_token', label: 'Bot Token', placeholder: 'xoxb-...' },
+    ],
+  },
+  {
+    key: 'bigquery',
+    name: 'BigQuery',
+    icon: Database,
+    description: 'SQL data warehouse',
+    type: 'api_key',
+    fields: [
+      { key: 'project_id', label: 'Project ID', placeholder: 'my-gcp-project' },
+      { key: 'service_account_json', label: 'Service Account JSON', placeholder: '{"type":"service_account",...}' },
+    ],
+  },
+  {
+    key: 'hubspot',
+    name: 'HubSpot',
+    icon: PieChart,
+    description: 'CRM pipeline & contacts',
+    type: 'api_key',
+    fields: [
+      { key: 'api_key', label: 'API Key', placeholder: 'pat-na1-...' },
+    ],
+  },
+  {
+    key: 'ga4',
+    name: 'GA4',
+    icon: BarChart3,
+    description: 'Web analytics & metrics',
+    type: 'api_key',
+    fields: [
+      { key: 'property_id', label: 'Property ID', placeholder: '123456789' },
+      { key: 'service_account_json', label: 'Service Account JSON', placeholder: '{"type":"service_account",...}' },
+    ],
+  },
 ];
 
 const statusIndicatorColor: Record<IntegrationStatus, string> = {
@@ -57,20 +116,6 @@ const statusBadgeLabel: Record<IntegrationStatus, string> = {
   api_error: 'API ERROR',
 };
 
-const statusActionLabel: Record<IntegrationStatus, string> = {
-  not_configured: 'CONNECT',
-  connected: 'CONFIGURE',
-  auth_error: 'RETRY',
-  api_error: 'RETRY',
-};
-
-const statusActionStyles: Record<IntegrationStatus, string> = {
-  not_configured: 'text-accent-500 border-2 border-accent-500 hover:bg-accent-500/10',
-  connected: 'text-text-secondary border-2 border-border-default hover:bg-bg-elevated',
-  auth_error: 'text-status-danger border-2 border-status-danger hover:bg-status-danger/10',
-  api_error: 'text-status-warning border-2 border-status-warning hover:bg-status-warning/10',
-};
-
 interface Shortcut {
   keys: string[];
   action: string;
@@ -92,12 +137,14 @@ const shortcuts: Shortcut[] = [
 function formatLastSync(lastSync: string | null): string {
   if (!lastSync) return 'NEVER';
   try {
-    return new Date(lastSync).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).toUpperCase();
+    return new Date(lastSync)
+      .toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+      .toUpperCase();
   } catch {
     return 'NEVER';
   }
@@ -108,6 +155,77 @@ function formatLastSync(lastSync: string | null): string {
 // ---------------------------------------------------------------------------
 
 export default function SettingsPage() {
+  const { data: session } = useSession();
+  const [statuses, setStatuses] = useState<Record<string, IntegrationState>>({});
+  const [loading, setLoading] = useState(true);
+  const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [formData, setFormData] = useState<Record<string, Record<string, string>>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+  const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+
+  const fetchStatuses = useCallback(async () => {
+    try {
+      const res = await fetch('/api/integrations/credentials');
+      if (res.ok) {
+        const data = await res.json();
+        setStatuses(data);
+      }
+    } catch (err) {
+      console.error('Failed to fetch integration statuses:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchStatuses();
+  }, [fetchStatuses]);
+
+  async function handleSaveCredentials(provider: string) {
+    const creds = formData[provider];
+    if (!creds) return;
+
+    setSaving(provider);
+    try {
+      const res = await fetch('/api/integrations/credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider, credentials: creds }),
+      });
+
+      if (res.ok) {
+        await fetchStatuses();
+        setExpandedKey(null);
+        setFormData((prev) => ({ ...prev, [provider]: {} }));
+      }
+    } catch (err) {
+      console.error('Failed to save credentials:', err);
+    } finally {
+      setSaving(null);
+    }
+  }
+
+  async function handleDisconnect(provider: string) {
+    try {
+      await fetch('/api/integrations/credentials', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ provider }),
+      });
+      await fetchStatuses();
+    } catch (err) {
+      console.error('Failed to disconnect:', err);
+    }
+  }
+
+  function getStatus(key: string): IntegrationStatus {
+    return (statuses[key]?.status as IntegrationStatus) ?? 'not_configured';
+  }
+
+  function getLastSync(key: string): string | null {
+    return statuses[key]?.lastSync ?? null;
+  }
+
   return (
     <div className="flex h-full flex-col">
       {/* Header */}
@@ -126,60 +244,151 @@ export default function SettingsPage() {
           </h2>
           <p className="font-mono text-xs text-text-tertiary mb-4 mt-2">
             Connect your tools to bring signals into Cortex.
+            {session?.user?.email && (
+              <span className="ml-2 text-terminal-400">
+                [{session.user.email}]
+              </span>
+            )}
           </p>
           <div className="grid grid-cols-2 gap-3">
-            {integrations.map((integration) => {
+            {integrationDefs.map((integration) => {
               const Icon = integration.icon;
+              const status = getStatus(integration.key);
+              const lastSync = getLastSync(integration.key);
+              const isExpanded = expandedKey === integration.key;
+
               return (
                 <div
-                  key={integration.name}
-                  className="flex items-start gap-3 border-2 border-border-default rounded-none bg-bg-surface p-4"
+                  key={integration.key}
+                  className="flex flex-col border-2 border-border-default rounded-none bg-bg-surface"
                 >
-                  {/* Status indicator light */}
-                  <div className={cn('mt-1.5 h-2 w-2 shrink-0 rounded-none', statusIndicatorColor[integration.status])} />
+                  <div className="flex items-start gap-3 p-4">
+                    {/* Status indicator light */}
+                    <div
+                      className={cn(
+                        'mt-1.5 h-2 w-2 shrink-0 rounded-none',
+                        statusIndicatorColor[status]
+                      )}
+                    />
 
-                  {/* Icon container */}
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-border-default bg-bg-base rounded-none">
-                    <Icon className="h-5 w-5 text-text-secondary" />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-sm font-bold text-text-primary">
-                        {integration.name}
-                      </span>
-                      <span className={cn(
-                        'inline-flex items-center rounded-none px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider',
-                        statusBadgeStyles[integration.status]
-                      )}>
-                        {statusBadgeLabel[integration.status]}
-                      </span>
+                    {/* Icon container */}
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center border-2 border-border-default bg-bg-base rounded-none">
+                      <Icon className="h-5 w-5 text-text-secondary" />
                     </div>
-                    <p className="mt-0.5 font-mono text-xs text-text-tertiary">
-                      {integration.description}
-                    </p>
-                    <p className="mt-1 font-mono text-[10px] tracking-wider text-text-tertiary">
-                      LAST SYNC: {formatLastSync(integration.lastSync)}
-                    </p>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-sm font-bold text-text-primary">
+                          {integration.name}
+                        </span>
+                        <span
+                          className={cn(
+                            'inline-flex items-center rounded-none px-1.5 py-0.5 font-mono text-[10px] font-bold uppercase tracking-wider',
+                            statusBadgeStyles[status]
+                          )}
+                        >
+                          {loading ? '...' : statusBadgeLabel[status]}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 font-mono text-xs text-text-tertiary">
+                        {integration.description}
+                      </p>
+                      <p className="mt-1 font-mono text-[10px] tracking-wider text-text-tertiary">
+                        LAST SYNC: {formatLastSync(lastSync)}
+                      </p>
+                    </div>
+
+                    {/* Action button */}
+                    {integration.type === 'google' ? (
+                      status === 'connected' ? (
+                        <span className="shrink-0 rounded-none border-2 border-terminal-400 bg-transparent px-3 py-1.5 font-mono text-xs font-bold uppercase text-terminal-400">
+                          LINKED
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => signIn('google', { callbackUrl: '/settings' })}
+                          className="shrink-0 rounded-none border-2 border-accent-500 bg-transparent px-3 py-1.5 font-mono text-xs font-bold uppercase text-accent-500 transition-colors hover:bg-accent-500/10"
+                        >
+                          SIGN IN
+                        </button>
+                      )
+                    ) : status === 'connected' ? (
+                      <button
+                        onClick={() => handleDisconnect(integration.key)}
+                        className="shrink-0 rounded-none border-2 border-status-danger bg-transparent px-3 py-1.5 font-mono text-xs font-bold uppercase text-status-danger transition-colors hover:bg-status-danger/10"
+                      >
+                        DISCONNECT
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() =>
+                          setExpandedKey(isExpanded ? null : integration.key)
+                        }
+                        className="shrink-0 rounded-none border-2 border-accent-500 bg-transparent px-3 py-1.5 font-mono text-xs font-bold uppercase text-accent-500 transition-colors hover:bg-accent-500/10"
+                      >
+                        {isExpanded ? 'CLOSE' : 'CONNECT'}
+                      </button>
+                    )}
                   </div>
 
-                  {/* Action button */}
-                  <button
-                    className={cn(
-                      'shrink-0 rounded-none bg-transparent px-3 py-1.5 font-mono text-xs font-bold uppercase transition-colors',
-                      statusActionStyles[integration.status]
-                    )}
-                  >
-                    {integration.status === 'auth_error' || integration.status === 'api_error' ? (
-                      <span className="flex items-center gap-1.5">
-                        <RotateCw className="h-3 w-3" />
-                        {statusActionLabel[integration.status]}
-                      </span>
-                    ) : (
-                      statusActionLabel[integration.status]
-                    )}
-                  </button>
+                  {/* Expanded credentials form */}
+                  {isExpanded && integration.fields && (
+                    <div className="border-t-2 border-border-default p-4 space-y-3">
+                      {integration.fields.map((field) => (
+                        <div key={field.key} className="space-y-1">
+                          <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-accent-500">
+                            {field.label}
+                          </label>
+                          <div className="relative">
+                            <input
+                              type={
+                                showSecrets[`${integration.key}_${field.key}`]
+                                  ? 'text'
+                                  : 'password'
+                              }
+                              value={formData[integration.key]?.[field.key] ?? ''}
+                              onChange={(e) =>
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  [integration.key]: {
+                                    ...prev[integration.key],
+                                    [field.key]: e.target.value,
+                                  },
+                                }))
+                              }
+                              placeholder={field.placeholder}
+                              className="w-full rounded-none border-2 border-border-default bg-bg-base px-3 py-2 pr-9 text-sm font-mono text-text-primary placeholder:text-text-tertiary outline-none transition-colors focus:border-accent-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowSecrets((prev) => ({
+                                  ...prev,
+                                  [`${integration.key}_${field.key}`]:
+                                    !prev[`${integration.key}_${field.key}`],
+                                }))
+                              }
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-secondary"
+                            >
+                              {showSecrets[`${integration.key}_${field.key}`] ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                      <button
+                        onClick={() => handleSaveCredentials(integration.key)}
+                        disabled={saving === integration.key}
+                        className="w-full rounded-none border-2 border-accent-500 bg-accent-500 px-3 py-2 font-mono text-xs font-bold uppercase text-black transition-colors hover:bg-accent-400 disabled:opacity-50"
+                      >
+                        {saving === integration.key ? 'SAVING...' : 'SAVE & CONNECT'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
